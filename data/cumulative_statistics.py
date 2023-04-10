@@ -194,7 +194,7 @@ class CumStat:
             return self.monthly_df.query('cod_art == @cod_art')
 
         cod_art_monthly_df = self.monthly_df.query('cod_art == @cod_art')
-        if fill_missing_data:
+        if not fill_missing_data:
             return cod_art_monthly_df
         start_end_date_df = self.df.groupby('cod_art').agg(start_date=('data', 'min'), end_date=('data', 'max'))
 
@@ -230,7 +230,7 @@ class CumStat:
             return self.weekly_df.query('cod_art == @cod_art')
 
         cod_art_weekly_df = self.weekly_df.query('cod_art == @cod_art').sort_values(by='week_no')
-        if fill_missing_data:
+        if not fill_missing_data:
             return cod_art_weekly_df
         start_end_date_df = self.df.groupby('cod_art').agg(start_date=('data', 'min'), end_date=('data', 'max'))
 
@@ -266,7 +266,7 @@ class CumStat:
             self._create_daily_df()
 
         cod_art_daily_df = self.daily_df.query('cod_art == @cod_art').sort_values(by='day')
-        if fill_missing_data:
+        if not fill_missing_data:
             return cod_art_daily_df
         start_end_date_df = cod_art_daily_df.index[[0, -1]]
 
@@ -290,8 +290,8 @@ class CumStat:
 
         return filled_df
 
-    def plot_monthly(self, cod_art, filename=None):
-        monthly_df = self.cumulate_monthly_article(cod_art)
+    def plot_monthly(self, cod_art, filename=None, fill_missing_data=False):
+        monthly_df = self.cumulate_monthly_article(cod_art, fill_missing_data)
         plt.plot(range(len(monthly_df)), monthly_df['cantitate'], label='cantitate')
         plt.legend()
 
@@ -303,8 +303,8 @@ class CumStat:
         else:
             plt.show()
 
-    def plot_weekly(self, cod_art, filename=None):
-        weekly_df = self.cumulate_weekly_article(cod_art)
+    def plot_weekly(self, cod_art, filename=None, fill_missing_data=False):
+        weekly_df = self.cumulate_weekly_article(cod_art, fill_missing_data)
         weekly_df.plot(y='cantitate', use_index=True)
 
         plt.xticks(rotation=60)
@@ -316,8 +316,8 @@ class CumStat:
         else:
             plt.show()
 
-    def plot_daily(self, cod_art, filename=None):
-        daily_df = self.cumulate_daily_article(cod_art)
+    def plot_daily(self, cod_art, filename=None, fill_missing_data=False):
+        daily_df = self.cumulate_daily_article(cod_art, fill_missing_data)
         daily_df.plot(y='cantitate', use_index=True)
 
         plt.xticks(rotation=60)
@@ -362,12 +362,12 @@ def test_features(path_to_csv):
     cumstat.plot_weekly(74, 'weekly_74.png')
 
 
-def plot_all_articles():
+def plot_all_articles(fill_missing_articles=False):
     cumstat = CumStat(path_to_csv=path_to_csv)
     cumstat.add_aggregator('cod_art', 'count')
     agg = cumstat.group_by('cod_art').reset_index()
     for cod_art in agg['cod_art']:
-        cumstat.plot_daily(cod_art, f'all_articles/not_filled/daily_{cod_art}.png')
+        cumstat.plot_daily(cod_art, f'all_articles/filled/daily_{cod_art}.png', fill_missing_data)
 
 
 if __name__ == '__main__':
@@ -404,7 +404,7 @@ if __name__ == '__main__':
     # cumstat.plot_weekly(1312, 'weekly_1312_.png')
     # cumstat.plot_daily(1312, 'daily_1312_.png')
 
-    # plot_all_articles()
+    # plot_all_articles(True)
 
     # if monthly_df:
     #     monthly_stat = cumstat.cumulate_monthly_all_articles(fill_missing_dates=False)
