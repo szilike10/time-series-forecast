@@ -288,7 +288,7 @@ class CumStat:
 
         filled_df['data'] = date_range
 
-        return cod_art_daily_df
+        return filled_df
 
     def plot_monthly(self, cod_art, filename=None):
         monthly_df = self.cumulate_monthly_article(cod_art)
