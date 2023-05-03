@@ -2,6 +2,7 @@ import pandas as pd
 import argparse
 import datetime
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class CumStat:
@@ -27,6 +28,9 @@ class CumStat:
         self.daily_df = None
         self.daily_df_filled = False
         self.aggregators = []
+
+    def get_all_article_ids(self):
+        return np.sort(self.df['cod_art'].unique())
 
     def add_aggregator(self, column_name: str, aggregator_function: str):
 
@@ -367,7 +371,7 @@ def plot_all_articles(fill_missing_articles=False):
     cumstat.add_aggregator('cod_art', 'count')
     agg = cumstat.group_by('cod_art').reset_index()
     for cod_art in agg['cod_art']:
-        cumstat.plot_daily(cod_art, f'all_articles/filled/daily_{cod_art}.png', fill_missing_data)
+        cumstat.plot_daily(cod_art, f'all_articles/filled/daily_{cod_art}.png', fill_missing_articles)
 
 
 if __name__ == '__main__':

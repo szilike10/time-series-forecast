@@ -7,11 +7,17 @@ class DataLoader:
         if (path_to_csv and df) or (path_to_csv is None and df is None):
             raise Exception('DataLoader object should be initialized with either a path to a CSV file or a DataFrame.')
         self.cumstat = CumStat(df=df, path_to_csv=path_to_csv)
-        self.cumstat.add_aggregator('data', 'min')
-        self.cumstat.add_aggregator('data', 'max')
+        self.cumulated_data = None
+
+    def get_article_ids(self):
+        return self.cumstat.get_all_article_ids()
 
     def load_data_for_article(self, cod_art, start_date=None, end_date=None):
-        data = self.cumstat.cumulate_daily_article(cod_art)
+        self.cumstat.add_aggregator('data', 'min')
+        self.cumstat.add_aggregator('data', 'max')
+        # if self.cumulated_data is None:
+        self.cumulated_data = self.cumstat.cumulate_daily_article(cod_art, True)
+        data = self.cumulated_data
         agg = self.cumstat.group_by('cod_art')
         data = pd.DataFrame({'ds': data['data'], 'y': data['cantitate']})
         train_split_len = int(0.8 * len(data))
