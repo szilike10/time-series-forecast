@@ -148,7 +148,7 @@ class CumStat:
         self.daily_category_df['data'] = self.daily_category_df['day']
         self.daily_category_df = self.daily_category_df.set_index('day')
 
-    def cumulate_monthly_all_articles(self, fill_missing_dates=False):
+    def cumulate_monthly_for_all_articles(self, fill_missing_dates=False):
 
         """
         Function to calculate monthly statistics for all the articles and possibly fill in the missing dates.
@@ -188,7 +188,7 @@ class CumStat:
 
         return self.monthly_cod_art_df.copy()
 
-    def cumulate_weekly_all_articles(self, fill_missing_dates=False):
+    def cumulate_weekly__for_all_articles(self, fill_missing_dates=False):
 
         """
         Function to calculate weekly statistics for all the articles and possibly fill in the missing dates.
@@ -379,6 +379,12 @@ class CumStat:
 
         return filled_df
 
+    def cumulate_daily_all_articles(self):
+        print(self.df['data'].min(), self.df['data'].max())
+        ret_df = self.df.groupby('data').agg(cantitate=('cantitate', 'sum'),
+                                             valoare=('valoare', 'sum')).reset_index()
+        return ret_df
+
     def plot_article_monthly(self, cod_art, filename=None, fill_missing_data=False):
         monthly_df = self.cumulate_monthly_article(cod_art, fill_missing_data)
         plt.plot(range(len(monthly_df)), monthly_df['cantitate'], label='cantitate')
@@ -450,9 +456,9 @@ def test_features(path_to_csv):
 
     agg = cumstat.group_by('cod_art').reset_index()
     print(agg.to_string())
-    agg = cumstat.cumulate_monthly_all_articles()
+    agg = cumstat.cumulate_monthly_for_all_articles()
     # print(agg.to_string())
-    agg = cumstat.cumulate_weekly_all_articles()
+    agg = cumstat.cumulate_weekly__for_all_articles()
     # print(agg.to_string())
 
     weekly_cumstat = CumStat(df=agg)
@@ -512,7 +518,13 @@ if __name__ == '__main__':
 
     monthly_stat, weekly_stat = None, None
 
-    plot_all_categories()
+    # plot_all_categories()
+
+    daily_all = cumstat.cumulate_daily_all_articles()
+    daily_all.plot(x='data', y='valoare')
+    plt.savefig(fr'C:\Users\bas6clj\time-series-forecast\data\combined_valoare.png', dpi=300)
+
+
 
     # cumstat.plot_monthly(74, 'monthly_74.png')
     # cumstat.plot_weekly(74, 'weekly_74.png')
