@@ -41,11 +41,8 @@ def predict_all_categories():
 
     categories = dataloader.get_categories()
 
-    # cod_art = 57
-    # train, val = dataloader.load_data_for_article(1312)
-
     for category in categories:
-        train, val = dataloader.load_data_for_category(category, fill_missing_data=True)
+        train, val = dataloader.load_data_for_category(category, fill_missing_data=False)
 
         m = Prophet(interval_width=0.80, daily_seasonality=False, weekly_seasonality=True, yearly_seasonality=True)
         if len(train) + len(val) >= 50:
@@ -60,8 +57,11 @@ def predict_all_categories():
             forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
             fig1 = m.plot(forecast)
 
+            ax = plt.gca()
+            ax.scatter(val['ds'], val['y'], c='red', s=10)
+
             # plt.show()
-            filename = fr'C:\Users\bas6clj\time-series-forecast\data\predictions\categories\filled\daily_{category}.png'
+            filename = fr'C:\Users\bas6clj\time-series-forecast\data\predictions\categories\not_filled\daily_{category}.png'
             plt.savefig(filename, dpi=300)
             #
             # fig2 = m.plot_components(forecast)
@@ -70,13 +70,11 @@ def predict_all_categories():
 
 def predicts_combined_products():
     dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
-    column = 'valoare'
+    column = 'cantitate'
 
     train, val = dataloader.load_combined_data(column)
 
-    m = Prophet(interval_width=0.80, daily_seasonality=False, weekly_seasonality=True, yearly_seasonality=True,
-                changepoint_prior_scale=0.07, seasonality_prior_scale=10, changepoint_range=0.8,
-                uncertainty_samples=10)
+    m = Prophet(interval_width=0.9, daily_seasonality=True, weekly_seasonality=True, yearly_seasonality=True)
     if len(train) + len(val) >= 50:
         m.fit(train)
 
@@ -89,6 +87,9 @@ def predicts_combined_products():
         forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
         fig1 = m.plot(forecast)
 
+        ax = plt.gca()
+        ax.scatter(val['ds'], val['y'], c='red', s=10)
+
         plt.show()
         # filename = fr'C:\Users\bas6clj\time-series-forecast\data\predictions\daily_{column}_111.png'
         # plt.savefig(filename, dpi=300)
@@ -98,6 +99,6 @@ def predicts_combined_products():
 
 
 if __name__ == '__main__':
-    # predict_all_categories()
+    predict_all_categories()
     # predict_all_cod_arts()
-    predicts_combined_products()
+    # predicts_combined_products()
