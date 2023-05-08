@@ -12,13 +12,28 @@ class DataLoader:
     def get_article_ids(self):
         return self.cumstat.get_all_article_ids()
 
+    def get_categories(self):
+        return self.cumstat.get_all_categories()
+
     def load_data_for_article(self, cod_art, start_date=None, end_date=None):
         self.cumstat.add_aggregator('data', 'min')
         self.cumstat.add_aggregator('data', 'max')
         # if self.cumulated_data is None:
-        self.cumulated_data = self.cumstat.cumulate_daily_article(cod_art, True)
-        data = self.cumulated_data
-        agg = self.cumstat.group_by('cod_art')
+        data = self.cumstat.cumulate_daily_article(cod_art, True)
+        data = pd.DataFrame({'ds': data['data'], 'y': data['cantitate']})
+        train_split_len = int(0.8 * len(data))
+        val_split_len = len(data) - train_split_len
+
+        train_split = data.iloc[:train_split_len]
+        val_split = data.iloc[train_split_len:]
+
+        return train_split, val_split
+
+    def load_data_for_category(self, category, fill_missing_data=False, start_date=None, end_date=None):
+        self.cumstat.add_aggregator('data', 'min')
+        self.cumstat.add_aggregator('data', 'max')
+        # if self.cumulated_data is None:
+        data = self.cumstat.cumulate_daily_category(category, fill_missing_data)
         data = pd.DataFrame({'ds': data['data'], 'y': data['cantitate']})
         train_split_len = int(0.8 * len(data))
         val_split_len = len(data) - train_split_len

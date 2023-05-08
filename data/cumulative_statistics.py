@@ -21,16 +21,22 @@ class CumStat:
         else:
             self.df = df
         self.df['data'] = pd.to_datetime(self.df['data'])
-        self.monthly_df = None
+        self.monthly_cod_art_df = None
+        self.monthly_category_df = None
         self.monthly_df_filled = False
-        self.weekly_df = None
+        self.weekly_cod_art_df = None
+        self.weekly_category_df = None
         self.weekly_df_filled = False
-        self.daily_df = None
+        self.daily_cod_art_df = None
+        self.daily_category_df = None
         self.daily_df_filled = False
         self.aggregators = []
 
     def get_all_article_ids(self):
         return np.sort(self.df['cod_art'].unique())
+
+    def get_all_categories(self):
+        return np.sort(self.df['category'].unique())
 
     def add_aggregator(self, column_name: str, aggregator_function: str):
 
@@ -56,20 +62,33 @@ class CumStat:
         return self.df.groupby(group_by) \
             .agg(**{f'{agg[1]}_{agg[0]}': (agg[0], agg[1]) for agg in self.aggregators}).reset_index()
 
-    def _create_monthly_df(self):
+    def _create_monthly_cod_art_df(self):
 
         """
         Helper function to create the monthly cumulated DataFrame.
         """
 
         self.df['month'] = self.df['data'].apply(lambda x: x.strftime('%Y-%m'))
-        self.monthly_df = self.df.groupby(['cod_art', 'month']).agg(cantitate=('cantitate', 'sum'),
-                                                                    pret=('pret', 'mean'),
-                                                                    valoare=('valoare', 'sum')).reset_index()
-        self.monthly_df = self.monthly_df.set_index('month')
-        self.monthly_df.index.name = 'data'
+        self.monthly_cod_art_df = self.df.groupby(['cod_art', 'month']).agg(cantitate=('cantitate', 'sum'),
+                                                                            pret=('pret', 'mean'),
+                                                                            valoare=('valoare', 'sum')).reset_index()
+        self.monthly_cod_art_df = self.monthly_cod_art_df.set_index('month')
+        self.monthly_cod_art_df.index.name = 'data'
 
-    def _create_weekly_df(self):
+    def _create_monthly_category_df(self):
+
+        """
+        Helper function to create the monthly cumulated DataFrame.
+        """
+
+        self.df['month'] = self.df['data'].apply(lambda x: x.strftime('%Y-%m'))
+        self.monthly_category_df = self.df.groupby(['category', 'month']).agg(cantitate=('cantitate', 'sum'),
+                                                                              pret=('pret', 'mean'),
+                                                                              valoare=('valoare', 'sum')).reset_index()
+        self.monthly_category_df = self.monthly_category_df.set_index('month')
+        self.monthly_category_df.index.name = 'data'
+
+    def _create_weekly_cod_art_df(self):
 
         """
         Helper function to create the weekly cumulated DataFrame.
@@ -78,12 +97,26 @@ class CumStat:
         self.df['week_no'] = self.df['data'].apply(lambda x: x.strftime('%Y-%U'))
         self.df = self.df.sort_values(by=['cod_art', 'week_no'])
 
-        self.weekly_df = self.df.groupby(['cod_art', 'week_no']).agg(cantitate=('cantitate', 'sum'),
-                                                                     pret=('pret', 'mean'),
-                                                                     valoare=('valoare', 'sum')).reset_index()
-        self.weekly_df = self.weekly_df.set_index('week_no')
+        self.weekly_cod_art_df = self.df.groupby(['cod_art', 'week_no']).agg(cantitate=('cantitate', 'sum'),
+                                                                             pret=('pret', 'mean'),
+                                                                             valoare=('valoare', 'sum')).reset_index()
+        self.weekly_cod_art_df = self.weekly_cod_art_df.set_index('week_no')
 
-    def _create_daily_df(self):
+    def _create_weekly_category_df(self):
+
+        """
+        Helper function to create the weekly cumulated DataFrame.
+        """
+
+        self.df['week_no'] = self.df['data'].apply(lambda x: x.strftime('%Y-%U'))
+        self.df = self.df.sort_values(by=['category', 'week_no'])
+
+        self.weekly_category_df = self.df.groupby(['category', 'week_no']).agg(cantitate=('cantitate', 'sum'),
+                                                                               pret=('pret', 'mean'),
+                                                                               valoare=('valoare', 'sum')).reset_index()
+        self.weekly_category_df = self.weekly_category_df.set_index('week_no')
+
+    def _create_daily_cod_art_df(self):
 
         """
         Helper function to create the weekly cumulated DataFrame.
@@ -92,12 +125,28 @@ class CumStat:
         self.df['day'] = self.df['data']
         self.df = self.df.sort_values(by=['cod_art', 'day'])
 
-        self.daily_df = self.df.groupby(['cod_art', 'day']).agg(cantitate=('cantitate', 'sum'),
-                                                                pret=('pret', 'mean'),
-                                                                valoare=('valoare', 'sum'),
-                                                                name=('denumire', 'first')).reset_index()
-        self.daily_df['data'] = self.daily_df['day']
-        self.daily_df = self.daily_df.set_index('day')
+        self.daily_cod_art_df = self.df.groupby(['cod_art', 'day']).agg(cantitate=('cantitate', 'sum'),
+                                                                        pret=('pret', 'mean'),
+                                                                        valoare=('valoare', 'sum'),
+                                                                        name=('denumire', 'first')).reset_index()
+        self.daily_cod_art_df['data'] = self.daily_cod_art_df['day']
+        self.daily_cod_art_df = self.daily_cod_art_df.set_index('day')
+
+    def _create_daily_category_df(self):
+
+        """
+        Helper function to create the weekly cumulated DataFrame.
+        """
+
+        self.df['day'] = self.df['data']
+        self.df = self.df.sort_values(by=['category', 'day'])
+
+        self.daily_category_df = self.df.groupby(['category', 'day']).agg(cantitate=('cantitate', 'sum'),
+                                                                          pret=('pret', 'mean'),
+                                                                          valoare=('valoare', 'sum'),
+                                                                          name=('denumire', 'first')).reset_index()
+        self.daily_category_df['data'] = self.daily_category_df['day']
+        self.daily_category_df = self.daily_category_df.set_index('day')
 
     def cumulate_monthly_all_articles(self, fill_missing_dates=False):
 
@@ -108,11 +157,11 @@ class CumStat:
         :return: a DataFrame object that contains all the relevant information cumulated for each month
         """
 
-        if self.monthly_df is None:
-            self._create_monthly_df()
+        if self.monthly_cod_art_df is None:
+            self._create_monthly_cod_art_df()
 
         if not fill_missing_dates:
-            return self.monthly_df.copy()
+            return self.monthly_cod_art_df.copy()
 
         cod_arts = self.df['cod_art'].unique()
         start_end_date_df = self.df.groupby('cod_art').agg(start_date=('data', 'min'), end_date=('data', 'max'))
@@ -128,16 +177,16 @@ class CumStat:
                 month_no = i.date().isoformat()[:7].replace('-', '_')
                 month_no_list.add(month_no)
 
-            cod_art_df = self.monthly_df.query('cod_art == @cod_art').sort_values(by='month')
+            cod_art_df = self.monthly_cod_art_df.query('cod_art == @cod_art').sort_values(by='month')
             for month_no in month_no_list:
                 contains = (cod_art_df['month'].eq(month_no)).any()
                 if not contains:
-                    self.monthly_df.loc[len(self.monthly_df.index)] = [cod_art, month_no, 0, 0, 0]
+                    self.monthly_cod_art_df.loc[len(self.monthly_cod_art_df.index)] = [cod_art, month_no, 0, 0, 0]
 
-            self.monthly_df = self.monthly_df.sort_values(by=['cod_art', 'month'])
+            self.monthly_cod_art_df = self.monthly_cod_art_df.sort_values(by=['cod_art', 'month'])
             self.monthly_df_filled = True
 
-        return self.monthly_df.copy()
+        return self.monthly_cod_art_df.copy()
 
     def cumulate_weekly_all_articles(self, fill_missing_dates=False):
 
@@ -148,11 +197,11 @@ class CumStat:
         :return: a DataFrame object that contains all the relevant information cumulated for each month
         """
 
-        if self.weekly_df is None:
-            self._create_weekly_df()
+        if self.weekly_cod_art_df is None:
+            self._create_weekly_cod_art_df()
 
         if not fill_missing_dates:
-            return self.weekly_df.copy()
+            return self.weekly_cod_art_df.copy()
 
         cod_arts = self.df['cod_art'].unique()
         start_end_date_df = self.df.groupby('cod_art').agg(start_date=('data', 'min'), end_date=('data', 'max'))
@@ -170,16 +219,16 @@ class CumStat:
                 week_no = '{:d}_{:02d}'.format(week_no[0], week_no[1])
                 week_no_list.add(week_no)
 
-            cod_art_df = self.weekly_df.query('cod_art == @cod_art').sort_values(by='week_no')
+            cod_art_df = self.weekly_cod_art_df.query('cod_art == @cod_art').sort_values(by='week_no')
             for week_no in week_no_list:
                 contains = (cod_art_df['week_no'].eq(week_no)).any()
                 if not contains:
-                    self.weekly_df.loc[len(self.weekly_df.index)] = [cod_art, week_no, 0, 0, 0]
+                    self.weekly_cod_art_df.loc[len(self.weekly_cod_art_df.index)] = [cod_art, week_no, 0, 0, 0]
 
-            self.weekly_df = self.weekly_df.sort_values(by=['cod_art', 'week_no'])
+            self.weekly_cod_art_df = self.weekly_cod_art_df.sort_values(by=['cod_art', 'week_no'])
             self.weekly_df_filled = True
 
-        return self.weekly_df.copy()
+        return self.weekly_cod_art_df.copy()
 
     # TODO: Adapt cumulative algorithms for date indexes as well
     def cumulate_monthly_article(self, cod_art, fill_missing_data=False):
@@ -191,13 +240,13 @@ class CumStat:
         :return: DataFrame with the cumulated monthly statistics.
         """
 
-        if self.monthly_df is None:
-            self._create_monthly_df()
+        if self.monthly_cod_art_df is None:
+            self._create_monthly_cod_art_df()
 
         if self.monthly_df_filled:
-            return self.monthly_df.query('cod_art == @cod_art')
+            return self.monthly_cod_art_df.query('cod_art == @cod_art')
 
-        cod_art_monthly_df = self.monthly_df.query('cod_art == @cod_art')
+        cod_art_monthly_df = self.monthly_cod_art_df.query('cod_art == @cod_art')
         if not fill_missing_data:
             return cod_art_monthly_df
         start_end_date_df = self.df.groupby('cod_art').agg(start_date=('data', 'min'), end_date=('data', 'max'))
@@ -227,13 +276,13 @@ class CumStat:
         :return: DataFrame with the cumulated weekly statistics.
         """
 
-        if self.weekly_df is None:
-            self._create_weekly_df()
+        if self.weekly_cod_art_df is None:
+            self._create_weekly_cod_art_df()
 
         if self.weekly_df_filled:
-            return self.weekly_df.query('cod_art == @cod_art')
+            return self.weekly_cod_art_df.query('cod_art == @cod_art')
 
-        cod_art_weekly_df = self.weekly_df.query('cod_art == @cod_art').sort_values(by='week_no')
+        cod_art_weekly_df = self.weekly_cod_art_df.query('cod_art == @cod_art').sort_values(by='week_no')
         if not fill_missing_data:
             return cod_art_weekly_df
         start_end_date_df = self.df.groupby('cod_art').agg(start_date=('data', 'min'), end_date=('data', 'max'))
@@ -266,10 +315,10 @@ class CumStat:
         :return: DataFrame with the cumulated daily statistics.
         """
 
-        if self.daily_df is None:
-            self._create_daily_df()
+        if self.daily_cod_art_df is None:
+            self._create_daily_cod_art_df()
 
-        cod_art_daily_df = self.daily_df.query('cod_art == @cod_art').sort_values(by='day')
+        cod_art_daily_df = self.daily_cod_art_df.query('cod_art == @cod_art').sort_values(by='day')
         if not fill_missing_data:
             return cod_art_daily_df
         start_end_date_df = cod_art_daily_df.index[[0, -1]]
@@ -294,7 +343,43 @@ class CumStat:
 
         return filled_df
 
-    def plot_monthly(self, cod_art, filename=None, fill_missing_data=False):
+    def cumulate_daily_category(self, category, fill_missing_data=False):
+        """
+        Calculate daily statistics with filled missing dates for a single article.
+        :param category: No. of the selected article.
+        :param fill_missing_data: whether to fill in the dates that have no sales on them
+        :return: DataFrame with the cumulated daily statistics.
+        """
+
+        if self.daily_category_df is None:
+            self._create_daily_category_df()
+
+        category_daily_df = self.daily_category_df.query('category == @category').sort_values(by='day')
+        if not fill_missing_data:
+            return category_daily_df
+        start_end_date_df = category_daily_df.index[[0, -1]]
+
+        present_days = {i: True for i in category_daily_df.index}
+
+        date_range = pd.period_range(*start_end_date_df, freq='D')
+        date_range = pd.to_datetime([i.start_time for i in date_range])
+        date_range_index = date_range
+
+        filled_df = pd.DataFrame.from_dict({'cod_art': [category for _ in range(len(date_range))],
+                                            'cantitate': [0 for _ in range(len(date_range))],
+                                            'pret': [0 for _ in range(len(date_range))],
+                                            'valoare': [0 for _ in range(len(date_range))]})
+
+        filled_df = filled_df.set_index(date_range_index)
+
+        for day in present_days:
+            filled_df.loc[day] = category_daily_df.loc[day, ['category', 'cantitate', 'pret', 'valoare']]
+
+        filled_df['data'] = date_range
+
+        return filled_df
+
+    def plot_article_monthly(self, cod_art, filename=None, fill_missing_data=False):
         monthly_df = self.cumulate_monthly_article(cod_art, fill_missing_data)
         plt.plot(range(len(monthly_df)), monthly_df['cantitate'], label='cantitate')
         plt.legend()
@@ -307,7 +392,7 @@ class CumStat:
         else:
             plt.show()
 
-    def plot_weekly(self, cod_art, filename=None, fill_missing_data=False):
+    def plot_article_weekly(self, cod_art, filename=None, fill_missing_data=False):
         weekly_df = self.cumulate_weekly_article(cod_art, fill_missing_data)
         weekly_df.plot(y='cantitate', use_index=True)
 
@@ -320,8 +405,25 @@ class CumStat:
         else:
             plt.show()
 
-    def plot_daily(self, cod_art, filename=None, fill_missing_data=False):
+    def plot_article_daily(self, cod_art, filename=None, fill_missing_data=False):
         daily_df = self.cumulate_daily_article(cod_art, fill_missing_data)
+        daily_df.plot(y='cantitate', use_index=True)
+
+        plt.xticks(rotation=60)
+        plt.xticks(fontsize=10)
+        plt.ylabel('Cantitate')
+        plt.tight_layout()
+        if filename:
+            plt.savefig(filename, dpi=300)
+        else:
+            plt.show()
+
+    def plot_category_daily(self, category, filename=None, fill_missing_data=False):
+        daily_df = self.cumulate_daily_category(category, fill_missing_data)
+        filter_count = 50
+        if len(daily_df) < filter_count:
+            print(f'For category {category} there were less than {filter_count} values found.')
+            return
         daily_df.plot(y='cantitate', use_index=True)
 
         plt.xticks(rotation=60)
@@ -362,8 +464,8 @@ def test_features(path_to_csv):
     weekly_agg = weekly_cumstat.group_by('cod_art').reset_index()
     print(weekly_agg)
 
-    cumstat.plot_monthly(74, 'monthly_74.png')
-    cumstat.plot_weekly(74, 'weekly_74.png')
+    cumstat.plot_article_monthly(74, 'monthly_74.png')
+    cumstat.plot_article_weekly(74, 'weekly_74.png')
 
 
 def plot_all_articles(fill_missing_articles=False):
@@ -371,7 +473,14 @@ def plot_all_articles(fill_missing_articles=False):
     cumstat.add_aggregator('cod_art', 'count')
     agg = cumstat.group_by('cod_art').reset_index()
     for cod_art in agg['cod_art']:
-        cumstat.plot_daily(cod_art, f'all_articles/filled/daily_{cod_art}.png', fill_missing_articles)
+        cumstat.plot_article_daily(cod_art, f'all_articles/filled/daily_{cod_art}.png', fill_missing_articles)
+
+
+def plot_all_categories(fill_missing_articles=False):
+    cumstat = CumStat(path_to_csv=path_to_csv)
+    categories = cumstat.get_all_categories()
+    for category in categories:
+        cumstat.plot_category_daily(category, f'all_categories/not_filled/daily_{category}.png', fill_missing_articles)
 
 
 if __name__ == '__main__':
@@ -399,9 +508,11 @@ if __name__ == '__main__':
     cumstat.add_aggregator('cantitate', 'mean')
     cumstat.add_aggregator('cantitate', 'std')
 
-    agg = cumstat.group_by('cod_art')
+    # agg = cumstat.group_by('cod_art')
 
     monthly_stat, weekly_stat = None, None
+
+    plot_all_categories()
 
     # cumstat.plot_monthly(74, 'monthly_74.png')
     # cumstat.plot_weekly(74, 'weekly_74.png')
