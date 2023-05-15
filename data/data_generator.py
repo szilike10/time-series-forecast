@@ -20,6 +20,7 @@ class DataLoader:
         self.cumstat.add_aggregator('data', 'max')
         # if self.cumulated_data is None:
         data = self.cumstat.cumulate_daily_article(cod_art, fill_missing_data)
+
         data = pd.DataFrame({'ds': data['data'], 'y': data['cantitate']})
         train_split_len = int(0.8 * len(data))
         val_split_len = len(data) - train_split_len
@@ -47,12 +48,14 @@ class DataLoader:
         self.cumstat.add_aggregator('data', 'min')
         self.cumstat.add_aggregator('data', 'max')
         # if self.cumulated_data is None:
-        data = self.cumstat.cumulate_daily_all_articles()
+        data = self.cumstat.cumulate_daily_all_articles(start_date, end_date)
         data = pd.DataFrame({'ds': data['data'], 'y': data[column]})
         train_split_len = int(0.8 * len(data))
         val_split_len = len(data) - train_split_len
 
         train_split = data.iloc[:train_split_len]
         val_split = data.iloc[train_split_len:]
+
+        print(val_split['ds'].iloc[0])
 
         return train_split, val_split

@@ -45,7 +45,7 @@ def predict_all_cod_arts():
 
     df_dict = {'cod_art': list(mse_losses.keys()), 'mse_loss': mse_losses.values()}
     loss_df = pd.DataFrame.from_dict(df_dict)
-    loss_df.to_csv('cod_art_losses.csv', index=False)
+    loss_df.to_csv('prophet_cod_art_losses.csv', index=False)
 
 def predict_all_categories():
     dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
@@ -87,14 +87,24 @@ def predict_all_categories():
 
     df_dict = {'category': list(mse_losses.keys()), 'mse_loss': mse_losses.values()}
     loss_df = pd.DataFrame.from_dict(df_dict)
-    loss_df.to_csv('categories_losses.csv', index=False)
+    loss_df.to_csv('prophet_categories_losses.csv', index=False)
 
+
+def plot_forecast(y_true, y_pred, column=''):
+    fig, ax = plt.subplots()
+
+    ax.plot(y_true['ds'], y_true['y'])
+    ax.plot(y_pred['ds'], y_pred['yhat'], 'r')
+
+    plt.savefig(f'prophet_forecast_combined_{column}', dpi=300)
 
 def predicts_combined_products():
     dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
     column = 'cantitate'
 
-    train, val = dataloader.load_combined_data(column)
+    train, val = dataloader.load_combined_data(column,
+                                               start_date=pd.to_datetime('2022-01-01'),
+                                               end_date=pd.to_datetime('2023-01-01'))
 
     m = Prophet(interval_width=0.9, daily_seasonality=True, weekly_seasonality=True, yearly_seasonality=True)
     if len(train) + len(val) >= 50:
@@ -103,7 +113,7 @@ def predicts_combined_products():
         future = m.make_future_dataframe(periods=500)
         future.tail()
         #
-        # future = train.append(val)
+        future = train.append(val)
 
         forecast = m.predict(future)
         forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail()
@@ -112,24 +122,26 @@ def predicts_combined_products():
         loss = mean_squared_error(val['y'], val_forecast['yhat'])
         print(loss)
 
-        # fig1 = m.plot(forecast)
+        fig1 = m.plot(forecast)
 
-        # ax = plt.gca()
-        # ax.scatter(val['ds'], val['y'], c='red', s=10)
+        ax = plt.gca()
+        ax.scatter(val['ds'], val['y'], c='red', s=10)
         #
         # plt.show()
 
-        # filename = fr'C:\Users\bas6clj\time-series-forecast\data\predictions\daily_{column}_111.png'
-        # plt.savefig(filename, dpi=300)
+        filename = fr'C:\Users\bas6clj\time-series-forecast\data\predictions\daily_{column}_111.png'
+        plt.savefig(filename, dpi=300)
         #
         # fig2 = m.plot_components(forecast)
         # plt.show()
 
         loss_df = pd.DataFrame.from_dict({'name': [column], 'loss': [loss]})
-        loss_df.to_csv(f'combined_{column}.csv', index=False)
+        loss_df.to_csv(f'prophet_combined_{column}.csv', index=False)
+
+        plot_forecast(val, val_forecast, column)
 
 
 if __name__ == '__main__':
-    predict_all_categories()
-    predict_all_cod_arts()
+    # predict_all_categories()
+    # predict_all_cod_arts()
     predicts_combined_products()
