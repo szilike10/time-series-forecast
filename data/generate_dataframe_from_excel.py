@@ -15,6 +15,7 @@ def read_excel_sheets(path):
         df = pd.concat([df, sheet])
 
     df = df.reset_index()
+    df = df.drop('index', axis=1)
 
     for i, e in enumerate(df['category']):
         if e in ['CARNATI', 'CEAFA', 'COTLET', 'PIEPT', 'SALAM', 'SLANINA', 'SUNCA']:

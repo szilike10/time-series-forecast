@@ -15,47 +15,17 @@ class DataLoader:
     def get_categories(self):
         return self.cumstat.get_all_categories()
 
-    def load_data_for_article(self, cod_art, fill_missing_data=False, start_date=None, end_date=None):
-        self.cumstat.add_aggregator('data', 'min')
-        self.cumstat.add_aggregator('data', 'max')
-        # if self.cumulated_data is None:
-        data = self.cumstat.cumulate_daily_article(cod_art, fill_missing_data)
+    def load_data(self, frequency='daily', item_type=None, type_identifier=None,
+                  value_type='valoare', start_date=None, end_date=None):
 
-        data = pd.DataFrame({'ds': data['data'], 'y': data['cantitate']})
+        cumulator_function = getattr(self.cumstat, f'get_{frequency}_items')
+        data = cumulator_function(item_type=item_type, type_identifier=type_identifier,
+                                  start_date=start_date, end_date=end_date).reset_index()
+        data = pd.DataFrame({'ds': data['data'], 'y': data[value_type]})
         train_split_len = int(0.8 * len(data))
         val_split_len = len(data) - train_split_len
 
         train_split = data.iloc[:train_split_len]
         val_split = data.iloc[train_split_len:]
-
-        return train_split, val_split
-
-    def load_data_for_category(self, category, fill_missing_data=False, start_date=None, end_date=None):
-        self.cumstat.add_aggregator('data', 'min')
-        self.cumstat.add_aggregator('data', 'max')
-        # if self.cumulated_data is None:
-        data = self.cumstat.cumulate_daily_category(category, fill_missing_data)
-        data = pd.DataFrame({'ds': data['data'], 'y': data['cantitate']})
-        train_split_len = int(0.8 * len(data))
-        val_split_len = len(data) - train_split_len
-
-        train_split = data.iloc[:train_split_len]
-        val_split = data.iloc[train_split_len:]
-
-        return train_split, val_split
-
-    def load_combined_data(self, column='valoare', fill_missing_data=False, start_date=None, end_date=None):
-        self.cumstat.add_aggregator('data', 'min')
-        self.cumstat.add_aggregator('data', 'max')
-        # if self.cumulated_data is None:
-        data = self.cumstat.cumulate_daily_all_articles(start_date, end_date)
-        data = pd.DataFrame({'ds': data['data'], 'y': data[column]})
-        train_split_len = int(0.8 * len(data))
-        val_split_len = len(data) - train_split_len
-
-        train_split = data.iloc[:train_split_len]
-        val_split = data.iloc[train_split_len:]
-
-        print(val_split['ds'].iloc[0])
 
         return train_split, val_split

@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 
 
-def predict_all_cod_arts():
+def predict_all_cod_arts(frequency='daily'):
     dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
 
     article_ids = dataloader.get_article_ids()
@@ -15,8 +15,15 @@ def predict_all_cod_arts():
 
     mse_losses = {}
 
+    column = 'valoare'
+
     for cod_art in article_ids:
-        train, val = dataloader.load_data_for_article(cod_art, fill_missing_data=False)
+        train, val = dataloader.load_data(frequency=frequency,
+                                          item_type='cod_art',
+                                          type_identifier=cod_art,
+                                          value_type=column,
+                                          start_date=pd.to_datetime('2022-01-01'),
+                                          end_date=pd.to_datetime('2023-01-01'))
 
         m = Prophet(interval_width=0.80, weekly_seasonality=True, daily_seasonality=False, yearly_seasonality=True)
         if len(train) >= 50:
@@ -47,15 +54,23 @@ def predict_all_cod_arts():
     loss_df = pd.DataFrame.from_dict(df_dict)
     loss_df.to_csv('prophet_cod_art_losses.csv', index=False)
 
-def predict_all_categories():
+
+def predict_all_categories(frequency='daily'):
     dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
 
     categories = dataloader.get_categories()
 
     mse_losses = {}
 
+    column = 'cantitate'
+
     for category in categories:
-        train, val = dataloader.load_data_for_category(category, fill_missing_data=False)
+        train, val = dataloader.load_data(frequency=frequency,
+                                          item_type='category',
+                                          type_identifier=category,
+                                          value_type=column,
+                                          start_date=pd.to_datetime('2022-01-01'),
+                                          end_date=pd.to_datetime('2023-01-01'))
 
         m = Prophet(interval_width=0.80, daily_seasonality=False, weekly_seasonality=True, yearly_seasonality=True)
         if len(train) + len(val) >= 50:
@@ -98,13 +113,19 @@ def plot_forecast(y_true, y_pred, column=''):
 
     plt.savefig(f'prophet_forecast_combined_{column}', dpi=300)
 
-def predicts_combined_products():
+
+def predicts_combined_products(frequency='daily'):
     dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
     column = 'cantitate'
 
-    train, val = dataloader.load_combined_data(column,
-                                               start_date=pd.to_datetime('2022-01-01'),
-                                               end_date=pd.to_datetime('2023-01-01'))
+    # train, val = dataloader.load_combined_data(column,
+    #                                            start_date=pd.to_datetime('2022-01-01'),
+    #                                            end_date=pd.to_datetime('2023-01-01'))
+
+    train, val = dataloader.load_data(frequency=frequency,
+                                      value_type=column,
+                                      start_date=pd.to_datetime('2022-01-01'),
+                                      end_date=pd.to_datetime('2023-01-01'))
 
     m = Prophet(interval_width=0.9, daily_seasonality=True, weekly_seasonality=True, yearly_seasonality=True)
     if len(train) + len(val) >= 50:
@@ -129,19 +150,19 @@ def predicts_combined_products():
         #
         # plt.show()
 
-        filename = fr'C:\Users\bas6clj\time-series-forecast\data\predictions\daily_{column}_111.png'
+        filename = fr'C:\Users\bas6clj\time-series-forecast\data\predictions\{frequency}_{column}_111.png'
         plt.savefig(filename, dpi=300)
         #
         # fig2 = m.plot_components(forecast)
         # plt.show()
 
         loss_df = pd.DataFrame.from_dict({'name': [column], 'loss': [loss]})
-        loss_df.to_csv(f'prophet_combined_{column}.csv', index=False)
+        loss_df.to_csv(f'prophet_combined_{frequency}_{column}.csv', index=False)
 
-        plot_forecast(val, val_forecast, column)
+        # plot_forecast(val, val_forecast, column)
 
 
 if __name__ == '__main__':
-    # predict_all_categories()
-    # predict_all_cod_arts()
-    predicts_combined_products()
+    # predict_all_categories(frequency='daily')
+    # predict_all_cod_arts(frequency='daily')
+    predicts_combined_products(frequency='daily')

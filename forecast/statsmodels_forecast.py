@@ -31,11 +31,16 @@ def check_stationarity(ts):
         return False
 
 
-def plot_autocorrelation():
+def plot_autocorrelation(frequency):
     dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
     column = 'cantitate'
 
-    train, val = dataloader.load_combined_data(column)
+    # train, val = dataloader.load_combined_data(column)
+
+    train, val = dataloader.load_data(frequency=frequency,
+                                      value_type=column,
+                                      start_date=pd.to_datetime('2022-01-01'),
+                                      end_date=pd.to_datetime('2023-01-01'))
 
     stationary = check_stationarity(train['y'])
 
@@ -62,13 +67,18 @@ def plot_forecast(y_true, y_pred, column=''):
 
     plt.savefig(f'statsmodels_forecast_combined_{column}', dpi=300)
 
-def predict_combined_products():
+def predict_combined_products(frequency='daily'):
     dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
     column = 'cantitate'
 
-    train, val = dataloader.load_combined_data(column,
-                                               start_date=pd.to_datetime('2022-01-01'),
-                                               end_date=pd.to_datetime('2023-01-01'))
+    # train, val = dataloader.load_combined_data(column,
+    #                                            start_date=pd.to_datetime('2022-01-01'),
+    #                                            end_date=pd.to_datetime('2023-01-01'))
+
+    train, val = dataloader.load_data(frequency=frequency,
+                                      value_type=column,
+                                      start_date=pd.to_datetime('2022-01-01'),
+                                      end_date=pd.to_datetime('2023-01-01'))
 
     p, d, q, m = 7, 0, 7, 14
 
@@ -96,18 +106,20 @@ def predict_combined_products():
     print('loss = ', loss)
 
     loss_df = pd.DataFrame.from_dict({'name': [column], 'loss': [loss]})
-    loss_df.to_csv(f'statsmodels_combined_{p}_{d}_{q}_{m}_{column}.csv', index=False)
+    loss_df.to_csv(f'statsmodels_combined_{frequency}_{p}_{d}_{q}_{m}_{column}.csv', index=False)
 
 
     # print(len(y_pred_df['y']))
     # print(len(val['y']))
+
+    # TODO: Investigate why plotting pred over val doesn't work
 
     ax = plt.gca()
     fig = plt.gcf()
     fig.set_size_inches(8, 5)
     ax.plot(y_pred_df['ds'], y_pred_df['y'], c='red')
 
-    plt.savefig(f'statsmodels_{p}_{d}_{q}_{m}_{column}.png', dpi=300)
+    plt.savefig(f'statsmodels_{frequency}_{p}_{d}_{q}_{m}_{column}.png', dpi=300)
     plt.show()
 
     plot_forecast(val, y_pred_df)
@@ -115,7 +127,8 @@ def predict_combined_products():
 
 
 if __name__ == '__main__':
-    # plot_autocorrelation()
+    frequency = 'daily'
 
-    predict_combined_products()
+    # plot_autocorrelation(frequency=frequency)
+    predict_combined_products(frequency=frequency)
 
