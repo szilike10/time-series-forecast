@@ -111,7 +111,11 @@ class CumStat:
         if (item_type, type_identifier) == (None, not None) \
                 or (item_type, type_identifier) == (not None, None):
             raise Exception('item_type and type identifier should either be both specfied or none of them')
+
         ret_df = self.cumulate_daily(group_by_column=item_type, start_date=start_date, end_date=end_date)
+
+        if item_type is not None:
+            ret_df = ret_df.query(f'{item_type} == @type_identifier')
 
         if not fill_missing_dates:
             return ret_df
@@ -123,6 +127,9 @@ class CumStat:
             raise Exception('item_type and type identifier should either be both specfied or none of them')
 
         ret_df = self.cumulate_weekly(group_by_column=item_type, start_date=start_date, end_date=end_date)
+
+        if item_type is not None:
+            ret_df = ret_df.query(f'{item_type} == @type_identifier')
 
         if not fill_missing_dates:
             return ret_df
@@ -269,6 +276,8 @@ if __name__ == '__main__':
     # agg = cumstat.group_by('cod_art')
 
     monthly_stat, weekly_stat = None, None
+
+    cumstat.get_daily_items(item_type='category', type_identifier='branza')
 
     cumstat.plot_daily_combined()
     cumstat.plot_weekly_combined()

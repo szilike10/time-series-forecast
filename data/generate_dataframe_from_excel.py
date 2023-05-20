@@ -11,17 +11,17 @@ def read_excel_sheets(path):
         sheet = excel.parse(sheet_name)
         sheet['furnizor'] = [sheet_name for _ in range(len(sheet))]
         # sheet['category'] = sheet.agg(lambda x: f"{' '.join(x['denumire'].split(' ')[:1])}", axis=1)
-        sheet['category'] = sheet.agg(lambda x: f"{' '.join(re.split(r'[ .]', x['denumire'])[:1])}", axis=1)
+        sheet['category'] = sheet.agg(lambda x: f"{' '.join(re.split(r'[ .]', x['denumire'])[:1])}".lower(), axis=1)
         df = pd.concat([df, sheet])
 
     df = df.reset_index()
     df = df.drop('index', axis=1)
 
     for i, e in enumerate(df['category']):
-        if e in ['CARNATI', 'CEAFA', 'COTLET', 'PIEPT', 'SALAM', 'SLANINA', 'SUNCA']:
-            df.at[i, 'category'] = 'CARNE'
-        elif e in ['BR', 'BRANZA']:
-            df.at[i, 'category'] = 'BRANZA'
+        if e in ['carnati', 'ceafa', 'cotlet', 'piept', 'salam', 'slanina', 'sunca']:
+            df.at[i, 'category'] = 'carne'
+        elif e in ['br', 'branza']:
+            df.at[i, 'category'] = 'branza'
     return df
 
 
