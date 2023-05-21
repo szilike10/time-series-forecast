@@ -9,6 +9,7 @@ from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from datetime import timedelta
 from sklearn.metrics import mean_squared_error
+from utils.path_handling import handle_parent_path
 
 
 def check_stationarity(ts):
@@ -31,9 +32,8 @@ def check_stationarity(ts):
         return False
 
 
-def plot_autocorrelation(frequency):
-    dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
-    column = 'cantitate'
+def plot_autocorrelation(frequency, column='valoare'):
+    dataloader = DataLoader(path_to_csv=r'../../data/combined.csv')
 
     # train, val = dataloader.load_combined_data(column)
 
@@ -41,46 +41,51 @@ def plot_autocorrelation(frequency):
                                       value_type=column,
                                       start_date=pd.to_datetime('2022-01-01'),
                                       end_date=pd.to_datetime('2023-01-01'))
+    data = pd.concat([train, val], axis=0)
 
-    stationary = check_stationarity(train['y'])
+    stationary = check_stationarity(data['y'])
 
     if not stationary:
         fig, (ax1, ax2, ax3) = plt.subplots(3)
 
-        plot_acf(train.y, ax=ax1)
-        plot_acf(train.y.diff().dropna(), ax=ax2)
-        plot_acf(train.y.diff().diff().dropna(), ax=ax3)
+        plot_acf(data['y'], ax=ax1)
+        plot_acf(data['y'].diff().dropna(), ax=ax2)
+        plot_acf(data['y'].diff().diff().dropna(), ax=ax3)
         plt.show()
 
-    plot_pacf(train.y.diff().dropna())
+    plot_pacf(data['y'].diff().dropna())
     plt.show()
 
-    plot_acf(train.y.diff().dropna())
+    plot_acf(data['y'].diff().dropna())
     plt.show()
 
 
-def plot_forecast(y_true, y_pred, column=''):
+def plot_forecast(y_true, y_pred, frequency, column, p=None, d=None, q=None, m=None):
     fig, ax = plt.subplots()
 
     ax.plot(y_true['ds'], y_true['y'])
     ax.plot(y_pred['ds'], y_pred['y'], 'r')
 
-    plt.savefig(f'statsmodels_forecast_combined_{column}', dpi=300)
+    ax.plot(y_pred['ds'], y_pred['lower y'], c='red', alpha=0.5, linewidth=1)
+    ax.plot(y_pred['ds'], y_pred['upper y'], c='red', alpha=0.5, linewidth=1)
+    ax.fill_between(y_pred['ds'], y_pred['lower y'], y_pred['upper y'], color='red', alpha=0.1)
 
-def predict_combined_products(frequency='daily'):
-    dataloader = DataLoader(path_to_csv=r'C:\Users\bas6clj\time-series-forecast\data\combined.csv')
-    column = 'cantitate'
+    val_plot_filename = f'charts/{frequency}/{column}/statsmodels_combined_{p}_{d}_{q}_{m}_val.png'
+    handle_parent_path(val_plot_filename)
+    plt.savefig(val_plot_filename, dpi=300)
 
-    # train, val = dataloader.load_combined_data(column,
-    #                                            start_date=pd.to_datetime('2022-01-01'),
-    #                                            end_date=pd.to_datetime('2023-01-01'))
+    plt.show()
+
+
+def predict_combined_products(frequency='daily', column='valoare'):
+    dataloader = DataLoader(path_to_csv=r'../../data/combined.csv')
 
     train, val = dataloader.load_data(frequency=frequency,
                                       value_type=column,
                                       start_date=pd.to_datetime('2022-01-01'),
                                       end_date=pd.to_datetime('2023-01-01'))
 
-    p, d, q, m = 7, 0, 7, 14
+    p, d, q, m = (7, 0, 7, 14) if frequency == 'daily' else (2, 1, 1, 8)
 
     ARMAmodel = SARIMAX(train['y'], order=(p, d, q), seasonal_order=(p, d, q, m))
     ARMAmodel = ARMAmodel.fit()
@@ -99,36 +104,46 @@ def predict_combined_products(frequency='daily'):
     # # print(val['ds'][0])
     # y_pred_df['ds'] = pd.date_range(start=val['ds'].iloc[0], end=val['ds'].iloc[0] + pd.DateOffset(days=days_to_forecast-1), freq='D')
 
+    data = pd.concat([train, val], axis=0)
 
-    train.append(val).plot(x='ds', y='y')
+    fig, ax = plt.subplots()
+    ax.plot(data['ds'], data['y'])
 
     loss = mean_squared_error(val['y'], y_pred_df['y'])
     print('loss = ', loss)
 
     loss_df = pd.DataFrame.from_dict({'name': [column], 'loss': [loss]})
-    loss_df.to_csv(f'statsmodels_combined_{frequency}_{p}_{d}_{q}_{m}_{column}.csv', index=False)
+    loss_df_filename = f'charts/{frequency}/{column}/statsmodels_combined_{p}_{d}_{q}_{m}.csv'
+    handle_parent_path(loss_df_filename)
+    loss_df.to_csv(loss_df_filename, index=False)
 
-
-    # print(len(y_pred_df['y']))
-    # print(len(val['y']))
-
-    # TODO: Investigate why plotting pred over val doesn't work
-
-    ax = plt.gca()
-    fig = plt.gcf()
     fig.set_size_inches(8, 5)
     ax.plot(y_pred_df['ds'], y_pred_df['y'], c='red')
 
-    plt.savefig(f'statsmodels_{frequency}_{p}_{d}_{q}_{m}_{column}.png', dpi=300)
+    # plot uncertainty
+    ax.plot(y_pred_df['ds'], y_pred_df['lower y'], c='red', alpha=0.5, linewidth=1)
+    ax.plot(y_pred_df['ds'], y_pred_df['upper y'], c='red', alpha=0.5, linewidth=1)
+    ax.fill_between(y_pred_df['ds'], y_pred_df['lower y'], y_pred_df['upper y'], color='red', alpha=0.1)
+
+    train_val_plot_filename = f'charts/{frequency}/{column}/statsmodels_{p}_{d}_{q}_{m}.png'
+    handle_parent_path(train_val_plot_filename)
+    plt.savefig(train_val_plot_filename, dpi=300)
     plt.show()
 
-    plot_forecast(val, y_pred_df)
+    plot_forecast(val, y_pred_df, frequency=frequency, p=p, d=d, q=q, m=m, column=column)
 
 
+def grid_search_parameters(frequency='daily', column='valoare'):
+    dataloader = DataLoader(path_to_csv=r'../../data/combined.csv')
+
+    train, val = dataloader.load_data(frequency=frequency,
+                                      value_type=column,
+                                      start_date=pd.to_datetime('2022-01-01'),
+                                      end_date=pd.to_datetime('2023-01-01'))
 
 if __name__ == '__main__':
     frequency = 'daily'
+    column = 'cantitate'
 
-    # plot_autocorrelation(frequency=frequency)
-    predict_combined_products(frequency=frequency)
-
+    # plot_autocorrelation(frequency=frequency, column=column)
+    predict_combined_products(frequency=frequency, column=column)

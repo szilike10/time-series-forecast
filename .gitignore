@@ -133,3 +133,5 @@ dmypy.json
 data/*.csv
 data/*.png
 *.png
+
+forecast/*/charts/
