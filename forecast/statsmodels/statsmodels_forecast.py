@@ -147,7 +147,7 @@ def grid_search_parameters(frequency='daily', column='valoare'):
 
     data = pd.concat([train, val], axis=0)
 
-    max_p, max_d, max_q, max_s = 10, 0, 10, 30
+    max_p, max_d, max_q, s_params = 10, 0, 10, [2, 4, 8, 12] if frequency == 'weekly' else [7, 14, 21, 28]
 
     best_non_seasonal = {
         'p': 1,
@@ -155,15 +155,13 @@ def grid_search_parameters(frequency='daily', column='valoare'):
         'q': 1,
         'bic': math.inf,
         'aic': math.inf,
+        'loss': math.inf,
         'adjusted_loss': math.inf
     }
 
     stationary = check_stationarity(data['y'])
     if not stationary:
         max_d = 2
-
-    if frequency == 'weekly':
-        max_s = 12
 
     non_seasonal_df = pd.DataFrame(columns=['p', 'd', 'q', 'loss', 'bic', 'aic', 'adjusted_loss'])
     non_seasonal_df_filename = f'charts/grid_search/{frequency}/{column}/non_seasonal/non_seasonal_search_results.csv'
@@ -190,18 +188,19 @@ def grid_search_parameters(frequency='daily', column='valoare'):
                 y_pred_df.index = val.index
 
                 loss = mean_squared_error(val['y'], y_pred_df['y'])
-                adjusted_loss = ARMAmodel.bic * ARMAmodel.aic * 0.0000001 * loss
+                adjusted_loss = ARMAmodel.bic * ARMAmodel.aic * loss
 
                 non_seasonal_df.loc[df_index] = [p, d, q, loss, ARMAmodel.bic, ARMAmodel.aic, adjusted_loss]
                 df_index += 1
                 handle_parent_path(non_seasonal_df_filename)
                 non_seasonal_df.to_csv(non_seasonal_df_filename)
 
-                if adjusted_loss < best_loss:
-                    best_loss = adjusted_loss
+                if loss < best_loss:
+                    best_loss = loss
                     best_non_seasonal['p'] = p
                     best_non_seasonal['d'] = d
                     best_non_seasonal['q'] = q
+                    best_non_seasonal['loss'] = loss
                     best_non_seasonal['adjusted_loss'] = adjusted_loss
 
                 if ARMAmodel.bic < best_non_seasonal['bic']:
@@ -221,7 +220,7 @@ def grid_search_parameters(frequency='daily', column='valoare'):
                 ax.plot(y_pred_df['ds'], y_pred_df['upper y'], c='red', alpha=0.5, linewidth=1)
                 ax.fill_between(y_pred_df['ds'], y_pred_df['lower y'], y_pred_df['upper y'], color='red', alpha=0.1)
 
-                train_val_plot_filename = f'charts/grid_search/{frequency}/{column}/non_seasonal/statsmodels_p={p}_d={d}_q={q}_loss={adjusted_loss:.2f}.png'
+                train_val_plot_filename = f'charts/grid_search/{frequency}/{column}/non_seasonal/statsmodels_p={p}_d={d}_q={q}_loss={loss:.2f}.png'
                 handle_parent_path(train_val_plot_filename)
                 plt.savefig(train_val_plot_filename, dpi=300)
 
@@ -236,6 +235,7 @@ def grid_search_parameters(frequency='daily', column='valoare'):
         's': 2,
         'bic': math.inf,
         'aic': math.inf,
+        'loss': math.inf,
         'adjusted_loss': math.inf
     }
 
@@ -245,7 +245,7 @@ def grid_search_parameters(frequency='daily', column='valoare'):
 
     best_loss = math.inf
 
-    for s in tqdm(range(7, max_s + 1), desc='s'):
+    for s in tqdm(s_params, desc='s'):
         for p in tqdm(range(1, max_p + 1), desc='p'):
             for q in tqdm(range(1, max_q + 1), desc='q'):
                 for d in tqdm(range(0, max_d + 1), desc='d'):
@@ -268,19 +268,20 @@ def grid_search_parameters(frequency='daily', column='valoare'):
                     y_pred_df.index = val.index
 
                     loss = mean_squared_error(val['y'], y_pred_df['y'])
-                    adjusted_loss = ARMAmodel.bic * ARMAmodel.aic * 0.0000001 * loss
+                    adjusted_loss = ARMAmodel.bic * ARMAmodel.aic * loss
 
                     seasonal_df.loc[df_index] = [p, d, q, s, loss, ARMAmodel.bic, ARMAmodel.aic, adjusted_loss]
                     df_index += 1
                     handle_parent_path(seasonal_df_filename)
                     seasonal_df.to_csv(seasonal_df_filename)
 
-                    if adjusted_loss < best_loss:
-                        best_loss = adjusted_loss
+                    if loss < best_loss:
+                        best_loss = loss
                         best_non_seasonal['p'] = p
                         best_non_seasonal['d'] = d
                         best_non_seasonal['q'] = q
                         best_non_seasonal['s'] = s
+                        best_non_seasonal['loss'] = loss
                         best_non_seasonal['adjusted_loss'] = adjusted_loss
 
                     if ARMAmodel.bic < best_non_seasonal['bic']:
@@ -300,7 +301,7 @@ def grid_search_parameters(frequency='daily', column='valoare'):
                     ax.plot(y_pred_df['ds'], y_pred_df['upper y'], c='red', alpha=0.5, linewidth=1)
                     ax.fill_between(y_pred_df['ds'], y_pred_df['lower y'], y_pred_df['upper y'], color='red', alpha=0.1)
 
-                    train_val_plot_filename = f'charts/grid_search/{frequency}/{column}/seasonal/statsmodels_p={p}_d={d}_q={q}_s={s}_loss={adjusted_loss:.2f}.png'
+                    train_val_plot_filename = f'charts/grid_search/{frequency}/{column}/seasonal/statsmodels_p={p}_d={d}_q={q}_s={s}_loss={loss:.2f}.png'
                     handle_parent_path(train_val_plot_filename)
                     plt.savefig(train_val_plot_filename, dpi=300)
 
