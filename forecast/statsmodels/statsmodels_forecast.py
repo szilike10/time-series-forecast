@@ -1,8 +1,10 @@
+import math
 import statsmodels
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima_model import ARMAResults
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from data.data_generator import DataLoader
 from statsmodels.tsa.stattools import adfuller
@@ -10,6 +12,7 @@ from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from datetime import timedelta
 from sklearn.metrics import mean_squared_error
 from utils.path_handling import handle_parent_path
+from tqdm import tqdm
 
 
 def check_stationarity(ts):
@@ -60,7 +63,7 @@ def plot_autocorrelation(frequency, column='valoare'):
     plt.show()
 
 
-def plot_forecast(y_true, y_pred, frequency, column, p=None, d=None, q=None, m=None):
+def plot_forecast(y_true, y_pred, frequency, column, p=None, d=None, q=None, m=None, draw_plot=False):
     fig, ax = plt.subplots()
 
     ax.plot(y_true['ds'], y_true['y'])
@@ -74,7 +77,8 @@ def plot_forecast(y_true, y_pred, frequency, column, p=None, d=None, q=None, m=N
     handle_parent_path(val_plot_filename)
     plt.savefig(val_plot_filename, dpi=300)
 
-    plt.show()
+    if draw_plot:
+        plt.show()
 
 
 def predict_combined_products(frequency='daily', column='valoare'):
@@ -112,7 +116,7 @@ def predict_combined_products(frequency='daily', column='valoare'):
     loss = mean_squared_error(val['y'], y_pred_df['y'])
     print('loss = ', loss)
 
-    loss_df = pd.DataFrame.from_dict({'name': [column], 'loss': [loss]})
+    loss_df = pd.DataFrame.from_dict({'name': [column], 'loss': [loss], 'adjusted_loss': [loss * 0.000001 * ARMAmodel.bic * ARMAmodel.aic]})
     loss_df_filename = f'charts/{frequency}/{column}/statsmodels_combined_{p}_{d}_{q}_{m}.csv'
     handle_parent_path(loss_df_filename)
     loss_df.to_csv(loss_df_filename, index=False)
@@ -141,9 +145,174 @@ def grid_search_parameters(frequency='daily', column='valoare'):
                                       start_date=pd.to_datetime('2022-01-01'),
                                       end_date=pd.to_datetime('2023-01-01'))
 
+    data = pd.concat([train, val], axis=0)
+
+    max_p, max_d, max_q, max_s = 10, 0, 10, 30
+
+    best_non_seasonal = {
+        'p': 1,
+        'd': 0,
+        'q': 1,
+        'bic': math.inf,
+        'aic': math.inf,
+        'adjusted_loss': math.inf
+    }
+
+    stationary = check_stationarity(data['y'])
+    if not stationary:
+        max_d = 2
+
+    if frequency == 'weekly':
+        max_s = 12
+
+    non_seasonal_df = pd.DataFrame(columns=['p', 'd', 'q', 'loss', 'bic', 'aic', 'adjusted_loss'])
+    non_seasonal_df_filename = f'charts/grid_search/{frequency}/{column}/non_seasonal/non_seasonal_search_results.csv'
+    df_index = 0
+
+    best_loss = math.inf
+
+    for p in tqdm(range(1, max_p + 1), desc='p'):
+        for q in tqdm(range(1, max_q + 1), desc='q'):
+            for d in tqdm(range(0, max_d + 1), desc='d'):
+
+                print('Testing for: ', p, d, q)
+
+                try:
+                    ARMAmodel = SARIMAX(train['y'], order=(p, d, q))
+                    ARMAmodel = ARMAmodel.fit(disp=0)
+                except:
+                    continue
+
+                y_pred = ARMAmodel.get_forecast(len(val['ds']))
+                y_pred_df = y_pred.conf_int(alpha=0.05)
+                y_pred_df["y"] = ARMAmodel.predict(start=y_pred_df.index[0], end=y_pred_df.index[-1])
+                y_pred_df['ds'] = val['ds']
+                y_pred_df.index = val.index
+
+                loss = mean_squared_error(val['y'], y_pred_df['y'])
+                adjusted_loss = ARMAmodel.bic * ARMAmodel.aic * 0.0000001 * loss
+
+                non_seasonal_df.loc[df_index] = [p, d, q, loss, ARMAmodel.bic, ARMAmodel.aic, adjusted_loss]
+                df_index += 1
+                handle_parent_path(non_seasonal_df_filename)
+                non_seasonal_df.to_csv(non_seasonal_df_filename)
+
+                if adjusted_loss < best_loss:
+                    best_loss = adjusted_loss
+                    best_non_seasonal['p'] = p
+                    best_non_seasonal['d'] = d
+                    best_non_seasonal['q'] = q
+                    best_non_seasonal['adjusted_loss'] = adjusted_loss
+
+                if ARMAmodel.bic < best_non_seasonal['bic']:
+                    best_non_seasonal['bic'] = ARMAmodel.bic
+
+                if ARMAmodel.aic < best_non_seasonal['aic']:
+                    best_non_seasonal['aic'] = ARMAmodel.aic
+
+                fig, ax = plt.subplots()
+                fig.set_size_inches(8, 5)
+
+                ax.plot(val['ds'], val['y'])
+                ax.plot(y_pred_df['ds'], y_pred_df['y'], c='red')
+
+                # plot uncertainty
+                ax.plot(y_pred_df['ds'], y_pred_df['lower y'], c='red', alpha=0.5, linewidth=1)
+                ax.plot(y_pred_df['ds'], y_pred_df['upper y'], c='red', alpha=0.5, linewidth=1)
+                ax.fill_between(y_pred_df['ds'], y_pred_df['lower y'], y_pred_df['upper y'], color='red', alpha=0.1)
+
+                train_val_plot_filename = f'charts/grid_search/{frequency}/{column}/non_seasonal/statsmodels_p={p}_d={d}_q={q}_loss={adjusted_loss:.2f}.png'
+                handle_parent_path(train_val_plot_filename)
+                plt.savefig(train_val_plot_filename, dpi=300)
+
+    print('Best non-seasonal values: ', best_non_seasonal)
+
+    non_seasonal_df.to_csv(non_seasonal_df_filename)
+
+    best_seasonal = {
+        'p': 1,
+        'd': 0,
+        'q': 1,
+        's': 2,
+        'bic': math.inf,
+        'aic': math.inf,
+        'adjusted_loss': math.inf
+    }
+
+    seasonal_df = pd.DataFrame(columns=['p', 'd', 'q', 's', 'loss', 'bic', 'aic', 'adjusted_loss'])
+    seasonal_df_filename = f'charts/grid_search/{frequency}/{column}/seasonal/seasonal_search_results.csv'
+    df_index = 0
+
+    best_loss = math.inf
+
+    for s in tqdm(range(7, max_s + 1), desc='s'):
+        for p in tqdm(range(1, max_p + 1), desc='p'):
+            for q in tqdm(range(1, max_q + 1), desc='q'):
+                for d in tqdm(range(0, max_d + 1), desc='d'):
+
+                    print('Testing for: ', p, d, q, s)
+
+                    try:
+                        ARMAmodel = SARIMAX(train['y'],
+                                            order=(best_non_seasonal['p'], best_non_seasonal['d'], best_non_seasonal['q']),
+                                            # order=(10, 0, 10),
+                                            seasonal_order=(p, d, q, s))
+                        ARMAmodel = ARMAmodel.fit(disp=0)
+                    except ValueError:
+                        continue
+
+                    y_pred = ARMAmodel.get_forecast(len(val['ds']))
+                    y_pred_df = y_pred.conf_int(alpha=0.05)
+                    y_pred_df["y"] = ARMAmodel.predict(start=y_pred_df.index[0], end=y_pred_df.index[-1])
+                    y_pred_df['ds'] = val['ds']
+                    y_pred_df.index = val.index
+
+                    loss = mean_squared_error(val['y'], y_pred_df['y'])
+                    adjusted_loss = ARMAmodel.bic * ARMAmodel.aic * 0.0000001 * loss
+
+                    seasonal_df.loc[df_index] = [p, d, q, s, loss, ARMAmodel.bic, ARMAmodel.aic, adjusted_loss]
+                    df_index += 1
+                    handle_parent_path(seasonal_df_filename)
+                    seasonal_df.to_csv(seasonal_df_filename)
+
+                    if adjusted_loss < best_loss:
+                        best_loss = adjusted_loss
+                        best_non_seasonal['p'] = p
+                        best_non_seasonal['d'] = d
+                        best_non_seasonal['q'] = q
+                        best_non_seasonal['s'] = s
+                        best_non_seasonal['adjusted_loss'] = adjusted_loss
+
+                    if ARMAmodel.bic < best_non_seasonal['bic']:
+                        best_non_seasonal['bic'] = ARMAmodel.bic
+
+                    if ARMAmodel.aic < best_non_seasonal['aic']:
+                        best_non_seasonal['aic'] = ARMAmodel.aic
+
+                    fig, ax = plt.subplots()
+                    fig.set_size_inches(8, 5)
+
+                    ax.plot(val['ds'], val['y'])
+                    ax.plot(y_pred_df['ds'], y_pred_df['y'], c='red')
+
+                    # plot uncertainty
+                    ax.plot(y_pred_df['ds'], y_pred_df['lower y'], c='red', alpha=0.5, linewidth=1)
+                    ax.plot(y_pred_df['ds'], y_pred_df['upper y'], c='red', alpha=0.5, linewidth=1)
+                    ax.fill_between(y_pred_df['ds'], y_pred_df['lower y'], y_pred_df['upper y'], color='red', alpha=0.1)
+
+                    train_val_plot_filename = f'charts/grid_search/{frequency}/{column}/seasonal/statsmodels_p={p}_d={d}_q={q}_s={s}_loss={adjusted_loss:.2f}.png'
+                    handle_parent_path(train_val_plot_filename)
+                    plt.savefig(train_val_plot_filename, dpi=300)
+
+    print('Best seasonal values: ', best_non_seasonal)
+    seasonal_df.to_csv(seasonal_df_filename)
+
+
 if __name__ == '__main__':
-    frequency = 'daily'
-    column = 'cantitate'
+    frequency = 'weekly'
+    column = 'valoare'
 
     # plot_autocorrelation(frequency=frequency, column=column)
-    predict_combined_products(frequency=frequency, column=column)
+    # predict_combined_products(frequency=frequency, column=column)
+
+    grid_search_parameters(frequency=frequency, column=column)
