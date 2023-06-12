@@ -23,7 +23,7 @@ class DataLoader:
                                   start_date=start_date, end_date=end_date).reset_index()
         data = pd.DataFrame({'ds': data['data'], 'y': data[value_type]})
         if value_type == 'valoare':
-            data['y'] *= 0.001
+            data['y'] *= 0.01
         train_split_len = int(0.8 * len(data))
         val_split_len = len(data) - train_split_len
 
