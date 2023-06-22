@@ -352,6 +352,7 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
     statsmodels_losses = []
     diffs = []
     relevant_type_identifiers = []
+    ps, ds, qs = [], [], []
 
     type_identifiers = [None]
     if item_type == 'category':
@@ -380,15 +381,23 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
             statsmodels_loss = df.loc[type_identifier, 'mse_loss']
             diff = statsmodels_loss - loss
 
+            ps.append(df.loc[type_identifier, 'p'])
+            ds.append(df.loc[type_identifier, 'd'])
+            qs.append(df.loc[type_identifier, 'q'])
+
             mse_loss.append(loss)
             statsmodels_losses.append(statsmodels_loss)
             diffs.append(diff)
 
     df = pd.DataFrame.from_dict({
         str(item_type): relevant_type_identifiers,
-        'mse_loss': mse_loss,
+        'mse_loss_of_mean': mse_loss,
         'statsmodels_loss': statsmodels_losses,
-        'diff': diffs})
+        'diff': diffs,
+        'p': ps,
+        'd': ds,
+        'q': qs,
+    })
     filename = f'charts/comparison_to_mean/{frequency}/{column}/statsmodels_{item_type}_compare_to_mean.csv'
     handle_parent_path(filename)
     df.to_csv(filename, index=False)

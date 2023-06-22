@@ -224,7 +224,7 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
 
     df = pd.DataFrame.from_dict({
         str(item_type): relevant_type_identifiers,
-        'mse_loss': mse_loss,
+        'mse_loss_of_mean': mse_loss,
         'prophet_loss': prophet_losses,
         'diff': diffs})
     filename = f'charts/comparison_to_mean/{frequency}/{column}/prophet_category_compare_to_mean.csv'
