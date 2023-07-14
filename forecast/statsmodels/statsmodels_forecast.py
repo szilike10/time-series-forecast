@@ -351,6 +351,8 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
     mse_loss = []
     statsmodels_losses = []
     diffs = []
+    percentages = []
+    improved = []
     relevant_type_identifiers = []
     ps, ds, qs = [], [], []
 
@@ -385,6 +387,9 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
             ds.append(df.loc[type_identifier, 'd'])
             qs.append(df.loc[type_identifier, 'q'])
 
+            improved.append(1 if diff < 0 else -1)
+            percentages.append(-diff / loss)
+
             mse_loss.append(loss)
             statsmodels_losses.append(statsmodels_loss)
             diffs.append(diff)
@@ -397,6 +402,8 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
         'p': ps,
         'd': ds,
         'q': qs,
+        'improved': improved,
+        'improved %': percentages
     })
     filename = f'charts/comparison_to_mean/{frequency}/{column}/statsmodels_{item_type}_compare_to_mean.csv'
     handle_parent_path(filename)
