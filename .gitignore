@@ -135,3 +135,5 @@ data/*.png
 *.png
 
 forecast/*/charts/
+forecast/pytorch/*.ckpt
+forecast/pytorch/lightning_logs
