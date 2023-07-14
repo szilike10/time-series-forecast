@@ -1,3 +1,5 @@
+import os.path
+
 import pandas as pd
 import argparse
 import datetime
@@ -65,6 +67,10 @@ class CumStat:
         Helper function to create the weekly cumulated DataFrame.
         """
 
+        path_to_cached_df = f'../../data/cumulated_weekly_{group_by_column}.csv'
+        if os.path.exists(path_to_cached_df):
+            return pd.read_csv(path_to_cached_df)
+
         self._fill_df_with_week()
         group_by_list = [] if group_by_column is None else [group_by_column]
         group_by_list.append('week')
@@ -80,6 +86,9 @@ class CumStat:
             ret_df = ret_df.query('data >= @start_date')
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
+
+        ret_df.to_csv(path_to_cached_df, index=True)
+
         return ret_df
 
     def cumulate_daily(self, group_by_column=None, start_date=None, end_date=None):
@@ -87,6 +96,10 @@ class CumStat:
         """
         Helper function to create the weekly cumulated DataFrame.
         """
+
+        path_to_cached_df = f'../../data/cumulated_daily_{group_by_column}.csv'
+        if os.path.exists(path_to_cached_df):
+            return pd.read_csv(path_to_cached_df)
 
         self._fill_df_with_day()
         group_by_list = [] if group_by_column is None else [group_by_column]
@@ -103,6 +116,8 @@ class CumStat:
             ret_df = ret_df.query('data >= @start_date')
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
+
+        ret_df.to_csv(path_to_cached_df, index=True)
 
         return ret_df
 
