@@ -189,6 +189,8 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
     mse_loss = []
     prophet_losses = []
     diffs = []
+    percentages = []
+    improved = []
     relevant_type_identifiers = []
 
     type_identifiers = [None]
@@ -218,6 +220,9 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
             prophet_loss = df.loc[type_identifier, 'mse_loss']
             diff = prophet_loss - loss
 
+            improved.append(1 if diff < 0 else -1)
+            percentages.append(-diff / loss)
+
             mse_loss.append(loss)
             prophet_losses.append(prophet_loss)
             diffs.append(diff)
@@ -226,7 +231,10 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
         str(item_type): relevant_type_identifiers,
         'mse_loss_of_mean': mse_loss,
         'prophet_loss': prophet_losses,
-        'diff': diffs})
+        'diff': diffs,
+        'improved': improved,
+        'improved %': percentages
+    })
     filename = f'charts/comparison_to_mean/{frequency}/{column}/prophet_category_compare_to_mean.csv'
     handle_parent_path(filename)
     df.to_csv(filename, index=False)
