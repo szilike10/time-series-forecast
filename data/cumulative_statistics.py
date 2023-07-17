@@ -91,7 +91,7 @@ class CumStat:
 
         return ret_df
 
-    def cumulate_daily(self, group_by_column=None, start_date=None, end_date=None):
+    def cumulate_daily(self, group_by_column=None, start_date=None, end_date=None, filter_under=0):
 
         """
         Helper function to create the weekly cumulated DataFrame.
@@ -110,12 +110,21 @@ class CumStat:
                                                     pret=('pret', 'mean'),
                                                     valoare=('valoare', 'sum')).reset_index()
         ret_df['data'] = ret_df['day']
-        ret_df = ret_df.set_index('day')
 
         if start_date:
             ret_df = ret_df.query('data >= @start_date')
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
+
+        if filter_under > 0:
+            counted = ret_df.groupby(group_by_column).agg(count=(group_by_column, 'count')).reset_index()
+            for i in range(len(counted)):
+                count = counted['count'][i]
+                key = counted[group_by_column][i]
+                if count < filter_under:
+                    ret_df.drop(ret_df.loc[ret_df[group_by_column] == key].index, inplace=True)
+
+        # ret_df = ret_df.set_index('day')
 
         ret_df.to_csv(path_to_cached_df, index=True)
 
@@ -127,7 +136,7 @@ class CumStat:
                 or (item_type, type_identifier) == (not None, None):
             raise Exception('item_type and type identifier should either be both specfied or none of them')
 
-        ret_df = self.cumulate_daily(group_by_column=item_type, start_date=start_date, end_date=end_date)
+        ret_df = self.cumulate_daily(group_by_column=item_type, start_date=start_date, end_date=end_date, filter_under=50)
 
         if item_type is not None:
             ret_df = ret_df.query(f'{item_type} == @type_identifier')
