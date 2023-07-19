@@ -3,6 +3,7 @@ from pathlib import Path
 import warnings
 
 import lightning.pytorch as pl
+import matplotlib.pyplot as plt
 from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor
 from lightning.pytorch.loggers import TensorBoardLogger
 import numpy as np
@@ -16,15 +17,13 @@ from pytorch_forecasting.data import GroupNormalizer
 from pytorch_forecasting.metrics import MAE, SMAPE, PoissonLoss, QuantileLoss
 from pytorch_forecasting.models.temporal_fusion_transformer.tuning import optimize_hyperparameters
 
-from pytorch_forecasting.data.examples import get_stallion_data
-
 
 if __name__ == '__main__':
     data = pd.read_csv('../../data/cumulated_daily_category.csv')
 
     # add time index
     data['date'] = pd.to_datetime(data['data'], errors='coerce')
-    data["time_idx"] = data["date"].dt.year * 365 + data["date"].dt.year % 4 + data["date"].dt.dayofyear
+    data["time_idx"] = data["date"].dt.year * 365 + data["date"].dt.year // 4 + data["date"].dt.dayofyear
     data["time_idx"] -= data["time_idx"].min()
 
     # add additional features
@@ -50,8 +49,8 @@ if __name__ == '__main__':
 
     data.describe()
 
-    max_prediction_length = 6
-    max_encoder_length = 24
+    max_prediction_length = 30
+    max_encoder_length = 150
     training_cutoff = data["time_idx"].max() - max_prediction_length
 
     training = TimeSeriesDataSet(
@@ -87,10 +86,7 @@ if __name__ == '__main__':
     # create dataloaders for model
     batch_size = 128  # set this between 32 to 128
     train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=0)
-    val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size * 10, num_workers=0)
-
-    baseline_predictions = Baseline().predict(val_dataloader, return_y=True)
-    MAE()(baseline_predictions.output, baseline_predictions.y)
+    val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=0)
 
     trainer = pl.Trainer(
         max_epochs=50,
@@ -130,7 +126,7 @@ if __name__ == '__main__':
     best_tft = TemporalFusionTransformer.load_from_checkpoint(best_model_path)
 
     # calcualte mean absolute error on validation set
-    predictions = best_tft.predict(val_dataloader, return_y=True, trainer_kwargs=dict(accelerator="cpu"))
+    predictions = best_tft.predict(val_dataloader, return_y=True, trainer_kwargs=dict(accelerator="gpu"))
     MAE()(predictions.output, predictions.y)
 
     # raw predictions are a dictionary from which all kind of information including quantiles can be extracted
@@ -138,3 +134,5 @@ if __name__ == '__main__':
 
     for idx in range(10):  # plot 10 examples
         best_tft.plot_prediction(raw_predictions.x, raw_predictions.output, idx=idx, add_loss_to_title=True)
+
+        plt.savefig(f'{idx}.png', dpi=600)
