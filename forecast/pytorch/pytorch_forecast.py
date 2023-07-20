@@ -19,15 +19,18 @@ from pytorch_forecasting.models.temporal_fusion_transformer.tuning import optimi
 
 
 if __name__ == '__main__':
-    data = pd.read_csv('../../data/cumulated_daily_category.csv')
+    data = pd.read_csv('../../data/cumulated_weekly_category.csv')
 
     # add time index
     data['date'] = pd.to_datetime(data['data'], errors='coerce')
-    data["time_idx"] = data["date"].dt.year * 365 + data["date"].dt.year // 4 + data["date"].dt.dayofyear
+    # data["time_idx"] = data["date"].dt.year * 365 + data["date"].dt.year // 4 + data["date"].dt.dayofyear
+    data["month"] = data.date.dt.month
+    data["time_idx"] = data["week_no"]
+    # data['time_idx'] = data['time_idx'] - 52 * data[]
     data["time_idx"] -= data["time_idx"].min()
 
     # add additional features
-    data["month"] = data.date.dt.month.astype(str).astype("category")  # categories have be strings
+    data['month'] = data.month.astype(str).astype("category")  # categories have be strings
 
     # we want to encode special days as one variable and thus need to first reverse one-hot encoding
     # special_days = [
@@ -49,8 +52,8 @@ if __name__ == '__main__':
 
     data.describe()
 
-    max_prediction_length = 30
-    max_encoder_length = 150
+    max_prediction_length = 4
+    max_encoder_length = 40
     training_cutoff = data["time_idx"].max() - max_prediction_length
 
     training = TimeSeriesDataSet(
@@ -65,7 +68,7 @@ if __name__ == '__main__':
         static_categoricals=['category'],
         static_reals=[],
         time_varying_known_categoricals=['month'],
-        time_varying_known_reals=["time_idx", 'cantitate', 'pret'],
+        time_varying_known_reals=["time_idx", 'pret'],
         time_varying_unknown_categoricals=[],
         time_varying_unknown_reals=[
             'valoare'
@@ -84,12 +87,12 @@ if __name__ == '__main__':
     validation = TimeSeriesDataSet.from_dataset(training, data, predict=True, stop_randomization=True)
 
     # create dataloaders for model
-    batch_size = 128  # set this between 32 to 128
+    batch_size = 64  # set this between 32 to 128
     train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=0)
     val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=0)
 
     trainer = pl.Trainer(
-        max_epochs=50,
+        max_epochs=3,
         accelerator="gpu",
         enable_model_summary=True,
         gradient_clip_val=0.1,
@@ -132,7 +135,10 @@ if __name__ == '__main__':
     # raw predictions are a dictionary from which all kind of information including quantiles can be extracted
     raw_predictions = best_tft.predict(val_dataloader, mode="raw", return_x=True)
 
-    for idx in range(10):  # plot 10 examples
+    print(len(val_dataloader))
+
+
+    for idx in range(len(raw_predictions.x)):  # plot 10 examples
         best_tft.plot_prediction(raw_predictions.x, raw_predictions.output, idx=idx, add_loss_to_title=True)
 
-        plt.savefig(f'{idx}.png', dpi=600)
+        plt.savefig(f'weekly_{idx}.png', dpi=600)

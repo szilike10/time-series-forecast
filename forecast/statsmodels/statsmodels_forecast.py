@@ -411,12 +411,12 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
 
 
 if __name__ == '__main__':
-    frequency = 'daily'
+    frequency = 'weekly'
     column = 'valoare'
 
     # plot_autocorrelation(frequency=frequency, column=column)
     # predict_combined_products(frequency=frequency, column=column)
 
-    # grid_search_item_types(item_type='category', frequency=frequency, column=column)
+    grid_search_item_types(item_type='category', frequency=frequency, column=column)
 
-    compare_to_mean(item_type='category', frequency=frequency, column=column)
+    # compare_to_mean(item_type='category', frequency=frequency, column=column)

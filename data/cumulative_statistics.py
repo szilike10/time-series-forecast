@@ -23,6 +23,8 @@ class CumStat:
         else:
             self.df = df
         self.df['data'] = pd.to_datetime(self.df['data'])
+        self.df['year'] = self.df['data'].dt.year
+        self.df['month'] = self.df['data'].dt.month
         self.aggregators = []
 
     def get_all_article_ids(self):
@@ -36,6 +38,9 @@ class CumStat:
 
     def _fill_df_with_week(self):
         self.df['week'] = self.df['data'].dt.to_period('W').dt.start_time + pd.Timedelta(6, unit='d')
+        self.df['week_no_annual'] = self.df['data'].dt.isocalendar().week
+        year_adjusted = (self.df['month'] == 1).astype(int).multiply((self.df['week_no_annual'] > 50).astype(int))
+        self.df['week_no'] = (self.df['year'] - year_adjusted) * 52 + self.df['week_no_annual']
 
     def add_aggregator(self, column_name: str, aggregator_function: str):
 
@@ -73,12 +78,13 @@ class CumStat:
 
         self._fill_df_with_week()
         group_by_list = [] if group_by_column is None else [group_by_column]
-        group_by_list.append('week')
+        group_by_list.append('week_no')
         self.df = self.df.sort_values(by=group_by_list)
 
         ret_df = self.df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
                                                     pret=('pret', 'mean'),
-                                                    valoare=('valoare', 'sum'))
+                                                    valoare=('valoare', 'sum'),
+                                                    week=('week', 'first'))
         ret_df = ret_df.reset_index()
         ret_df['data'] = ret_df['week']
         if start_date:
@@ -93,6 +99,8 @@ class CumStat:
                 key = counted[group_by_column][i]
                 if count < filter_under:
                     ret_df.drop(ret_df.loc[ret_df[group_by_column] == key].index, inplace=True)
+
+        ret_df = ret_df.reset_index()
 
         ret_df.to_csv(path_to_cached_df, index=True)
 
@@ -132,6 +140,7 @@ class CumStat:
                     ret_df.drop(ret_df.loc[ret_df[group_by_column] == key].index, inplace=True)
 
         # ret_df = ret_df.set_index('day')
+        ret_df = ret_df.reset_index()
 
         ret_df.to_csv(path_to_cached_df, index=True)
 
@@ -143,7 +152,7 @@ class CumStat:
                 or (item_type, type_identifier) == (not None, None):
             raise Exception('item_type and type identifier should either be both specfied or none of them')
 
-        ret_df = self.cumulate_daily(group_by_column=item_type, start_date=start_date, end_date=end_date, filter_under=50)
+        ret_df = self.cumulate_daily(group_by_column=item_type, start_date=start_date, end_date=end_date, filter_under=150)
 
         if item_type is not None:
             ret_df = ret_df.query(f'{item_type} == @type_identifier')
