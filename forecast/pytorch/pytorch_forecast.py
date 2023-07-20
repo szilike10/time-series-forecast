@@ -19,13 +19,13 @@ from pytorch_forecasting.models.temporal_fusion_transformer.tuning import optimi
 
 
 if __name__ == '__main__':
-    data = pd.read_csv('../../data/cumulated_weekly_category.csv')
+    data = pd.read_csv('../../data/cumulated_daily_category.csv')
 
     # add time index
     data['date'] = pd.to_datetime(data['data'], errors='coerce')
-    # data["time_idx"] = data["date"].dt.year * 365 + data["date"].dt.year // 4 + data["date"].dt.dayofyear
+    data["time_idx"] = data["date"].dt.year * 365 + data["date"].dt.year // 4 + data["date"].dt.dayofyear
     data["month"] = data.date.dt.month
-    data["time_idx"] = data["week_no"]
+    # data["time_idx"] = data["week_no"]
     # data['time_idx'] = data['time_idx'] - 52 * data[]
     data["time_idx"] -= data["time_idx"].min()
 
@@ -52,12 +52,14 @@ if __name__ == '__main__':
 
     data.describe()
 
-    max_prediction_length = 4
-    max_encoder_length = 40
+    # max_prediction_length = 12
+    # max_encoder_length = 52
+    max_prediction_length = 30
+    max_encoder_length = 300
     training_cutoff = data["time_idx"].max() - max_prediction_length
 
     training = TimeSeriesDataSet(
-        data[lambda x: x.time_idx <= training_cutoff],
+        data[data["time_idx"] < training_cutoff],
         time_idx="time_idx",
         target="valoare",
         group_ids=['category'],
@@ -67,8 +69,8 @@ if __name__ == '__main__':
         max_prediction_length=max_prediction_length,
         static_categoricals=['category'],
         static_reals=[],
-        time_varying_known_categoricals=['month'],
-        time_varying_known_reals=["time_idx", 'pret'],
+        time_varying_known_categoricals=[],
+        time_varying_known_reals=["time_idx", 'pret', 'month'],
         time_varying_unknown_categoricals=[],
         time_varying_unknown_reals=[
             'valoare'
@@ -84,35 +86,45 @@ if __name__ == '__main__':
 
     # create validation set (predict=True) which means to predict the last max_prediction_length points in time
     # for each series
-    validation = TimeSeriesDataSet.from_dataset(training, data, predict=True, stop_randomization=True)
+    validation = TimeSeriesDataSet.from_dataset(
+        training,
+        data,
+        predict=True,
+        stop_randomization=True,
+        allow_missing_timesteps=True)
 
     # create dataloaders for model
-    batch_size = 64  # set this between 32 to 128
+    batch_size = 128  # set this between 32 to 128
     train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=0)
     val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=0)
 
+    # configure network and trainer
+    early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=15, verbose=False, mode="min")
+    lr_logger = LearningRateMonitor()  # log the learning rate
+    logger = TensorBoardLogger("lightning_logs")  # logging results to a tensorboard
+
     trainer = pl.Trainer(
-        max_epochs=3,
-        accelerator="gpu",
+        max_epochs=30,
+        accelerator="cpu",
         enable_model_summary=True,
-        gradient_clip_val=0.1,
+        gradient_clip_val=0.15,
         limit_train_batches=50,  # coment in for training, running valiation every 30 batches
         # fast_dev_run=True,  # comment in to check that networkor dataset has no serious bugs
-        # callbacks=[lr_logger, early_stop_callback],
-        # logger=logger,
+        callbacks=[lr_logger, early_stop_callback],
+        logger=logger,
     )
 
     tft = TemporalFusionTransformer.from_dataset(
         training,
-        learning_rate=0.03,
+        learning_rate=0.001,
         hidden_size=16,
-        attention_head_size=2,
+        attention_head_size=4,
         dropout=0.1,
-        hidden_continuous_size=8,
+        hidden_continuous_size=10,
         loss=QuantileLoss(),
         log_interval=10,  # uncomment for learning rate finder and otherwise, e.g. to 10 for logging every 10 batches
         optimizer="Ranger",
-        reduce_on_plateau_patience=4,
+        reduce_on_plateau_patience=5,
     )
     print(f"Number of parameters in network: {tft.size() / 1e3:.1f}k")
 
@@ -126,17 +138,15 @@ if __name__ == '__main__':
     # load the best model according to the validation loss
     # (given that we use early stopping, this is not necessarily the last epoch)
     best_model_path = trainer.checkpoint_callback.best_model_path
+    print(f'Best model path: {best_model_path}')
     best_tft = TemporalFusionTransformer.load_from_checkpoint(best_model_path)
 
     # calcualte mean absolute error on validation set
-    predictions = best_tft.predict(val_dataloader, return_y=True, trainer_kwargs=dict(accelerator="gpu"))
+    predictions = best_tft.predict(val_dataloader, return_y=True, trainer_kwargs=dict(accelerator="cpu"))
     MAE()(predictions.output, predictions.y)
 
     # raw predictions are a dictionary from which all kind of information including quantiles can be extracted
     raw_predictions = best_tft.predict(val_dataloader, mode="raw", return_x=True)
-
-    print(len(val_dataloader))
-
 
     for idx in range(len(raw_predictions.x)):  # plot 10 examples
         best_tft.plot_prediction(raw_predictions.x, raw_predictions.output, idx=idx, add_loss_to_title=True)
