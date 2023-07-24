@@ -1,6 +1,7 @@
 import copy
 from pathlib import Path
 import warnings
+import os
 
 import lightning.pytorch as pl
 import matplotlib.pyplot as plt
@@ -14,52 +15,33 @@ from pytorch_forecasting import Baseline
 from pytorch_forecasting import TemporalFusionTransformer
 from pytorch_forecasting import TimeSeriesDataSet
 from pytorch_forecasting.data import GroupNormalizer
-from pytorch_forecasting.metrics import MAE, SMAPE, PoissonLoss, QuantileLoss
+from pytorch_forecasting.metrics import MAE, SMAPE, PoissonLoss, QuantileLoss, RMSE
 from pytorch_forecasting.models.temporal_fusion_transformer.tuning import optimize_hyperparameters
 
 
 if __name__ == '__main__':
-    data = pd.read_csv('../../data/cumulated_daily_category.csv')
+
+    frequency = 'daily'
+
+    data = pd.read_csv(fr'../../data/cumulated_{frequency}_category.csv')
 
     # add time index
     data['date'] = pd.to_datetime(data['data'], errors='coerce')
-    data["time_idx"] = data["date"].dt.year * 365 + data["date"].dt.year // 4 + data["date"].dt.dayofyear
     data["month"] = data.date.dt.month
-    # data["time_idx"] = data["week_no"]
-    # data['time_idx'] = data['time_idx'] - 52 * data[]
+    data["time_idx"] = data["week_no"] if frequency == 'weekly' else data["date"].dt.year * 365 + data["date"].dt.year // 4 + data["date"].dt.dayofyear
     data["time_idx"] -= data["time_idx"].min()
 
     # add additional features
     data['month'] = data.month.astype(str).astype("category")  # categories have be strings
 
-    # we want to encode special days as one variable and thus need to first reverse one-hot encoding
-    # special_days = [
-    #     "easter_day",
-    #     "good_friday",
-    #     "new_year",
-    #     "christmas",
-    #     "labor_day",
-    #     "independence_day",
-    #     "revolution_day_memorial",
-    #     "regional_games",
-    #     "fifa_u_17_world_cup",
-    #     "football_gold_cup",
-    #     "beer_capital",
-    #     "music_fest",
-    # ]
-    # data[special_days] = data[special_days].apply(lambda x: x.map({0: "-", 1: x.name})).astype("category")
-    # data.sample(10, random_state=521)
-
     data.describe()
 
-    # max_prediction_length = 12
-    # max_encoder_length = 52
-    max_prediction_length = 30
-    max_encoder_length = 300
+    max_prediction_length = 3 if frequency == 'weekly' else 21
+    max_encoder_length = 21 if frequency == 'weekly' else 150
     training_cutoff = data["time_idx"].max() - max_prediction_length
 
     training = TimeSeriesDataSet(
-        data[data["time_idx"] < training_cutoff],
+        data[lambda x: x.time_idx <= training_cutoff],
         time_idx="time_idx",
         target="valoare",
         group_ids=['category'],
@@ -69,8 +51,8 @@ if __name__ == '__main__':
         max_prediction_length=max_prediction_length,
         static_categoricals=['category'],
         static_reals=[],
-        time_varying_known_categoricals=[],
-        time_varying_known_reals=["time_idx", 'pret', 'month'],
+        time_varying_known_categoricals=['month'],
+        time_varying_known_reals=["time_idx", 'pret'],
         time_varying_unknown_categoricals=[],
         time_varying_unknown_reals=[
             'valoare'
@@ -86,12 +68,7 @@ if __name__ == '__main__':
 
     # create validation set (predict=True) which means to predict the last max_prediction_length points in time
     # for each series
-    validation = TimeSeriesDataSet.from_dataset(
-        training,
-        data,
-        predict=True,
-        stop_randomization=True,
-        allow_missing_timesteps=True)
+    validation = TimeSeriesDataSet.from_dataset(training, data, predict=True, stop_randomization=True)
 
     # create dataloaders for model
     batch_size = 128  # set this between 32 to 128
@@ -99,16 +76,16 @@ if __name__ == '__main__':
     val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=0)
 
     # configure network and trainer
-    early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=15, verbose=False, mode="min")
+    early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=20, verbose=False, mode="min")
     lr_logger = LearningRateMonitor()  # log the learning rate
     logger = TensorBoardLogger("lightning_logs")  # logging results to a tensorboard
 
     trainer = pl.Trainer(
-        max_epochs=30,
-        accelerator="cpu",
+        max_epochs=50,
+        accelerator="gpu",
         enable_model_summary=True,
-        gradient_clip_val=0.15,
-        limit_train_batches=50,  # coment in for training, running valiation every 30 batches
+        gradient_clip_val=0.1,
+        # limit_train_batches=50,  # coment in for training, running valiation every 30 batches
         # fast_dev_run=True,  # comment in to check that networkor dataset has no serious bugs
         callbacks=[lr_logger, early_stop_callback],
         logger=logger,
@@ -116,12 +93,12 @@ if __name__ == '__main__':
 
     tft = TemporalFusionTransformer.from_dataset(
         training,
-        learning_rate=0.001,
-        hidden_size=16,
-        attention_head_size=4,
+        learning_rate=0.0001,
+        hidden_size=24,
+        attention_head_size=6,
         dropout=0.1,
-        hidden_continuous_size=10,
-        loss=QuantileLoss(),
+        hidden_continuous_size=16,
+        loss=RMSE(),
         log_interval=10,  # uncomment for learning rate finder and otherwise, e.g. to 10 for logging every 10 batches
         optimizer="Ranger",
         reduce_on_plateau_patience=5,
@@ -138,17 +115,18 @@ if __name__ == '__main__':
     # load the best model according to the validation loss
     # (given that we use early stopping, this is not necessarily the last epoch)
     best_model_path = trainer.checkpoint_callback.best_model_path
-    print(f'Best model path: {best_model_path}')
     best_tft = TemporalFusionTransformer.load_from_checkpoint(best_model_path)
 
     # calcualte mean absolute error on validation set
-    predictions = best_tft.predict(val_dataloader, return_y=True, trainer_kwargs=dict(accelerator="cpu"))
+    predictions = best_tft.predict(val_dataloader, return_y=True, trainer_kwargs=dict(accelerator="gpu"))
     MAE()(predictions.output, predictions.y)
 
     # raw predictions are a dictionary from which all kind of information including quantiles can be extracted
     raw_predictions = best_tft.predict(val_dataloader, mode="raw", return_x=True)
 
-    for idx in range(len(raw_predictions.x)):  # plot 10 examples
+    print(len(val_dataloader))
+
+    for idx in range(len(raw_predictions.x)):
         best_tft.plot_prediction(raw_predictions.x, raw_predictions.output, idx=idx, add_loss_to_title=True)
 
-        plt.savefig(f'weekly_{idx}.png', dpi=600)
+        plt.savefig(f'{best_model_path.rsplit(os.sep, 1)[0]}/{frequency}_{idx}.png', dpi=600)
