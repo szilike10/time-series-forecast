@@ -28,6 +28,7 @@ class PytorchConfig(Config):
         self.attention_head_size = self.yaml_obj['attention_head_size']
         self.hidden_continuous_size = self.yaml_obj['hidden_continuous_size']
         self.reduce_on_plateau_patience = self.yaml_obj['reduce_on_plateau_patience']
+        self.early_stopping_patience = self.yaml_obj['early_stopping_patience']
         self.best_model_out_path = self.yaml_obj['best_model_out_path']
 
         loss_fn_dict = {
@@ -37,6 +38,9 @@ class PytorchConfig(Config):
 
         self.loss_fn = loss_fn_dict[self.yaml_obj['loss_fn']]
 
-
-
+    def __str__(self):
+        ret = ''
+        for name, value in self.yaml_obj.items():
+            ret += f'{name}: {value}\n'
+        return ret
 
