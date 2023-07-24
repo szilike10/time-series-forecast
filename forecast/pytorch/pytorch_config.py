@@ -9,6 +9,7 @@ class PytorchConfig(Config):
 
         self.frequency = self.yaml_obj['frequency']
         self.cumulated_csv_path = self.yaml_obj['cumulated_csv_path']
+        self.smoothing_window_size = self.yaml_obj['smoothing_window_size']
         if self.cumulated_csv_path == '':
             self.cumulated_csv_path = fr'../../data/cumulated_{self.frequency}_category.csv'
         self.max_prediction_length = self.yaml_obj['max_prediction_length']

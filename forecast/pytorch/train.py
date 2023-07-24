@@ -22,4 +22,4 @@ if __name__ == '__main__':
     cfg = load_config(cfg_path)
     tft_model = create_model(cfg)
     tft_model.fit()
-    tft_model.eval()
+    tft_model.eval(visualize=True)

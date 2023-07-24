@@ -101,6 +101,7 @@ class CumStat:
                     ret_df.drop(ret_df.loc[ret_df[group_by_column] == key].index, inplace=True)
 
         ret_df = ret_df.reset_index()
+        del ret_df['index']
 
         ret_df.to_csv(path_to_cached_df, index=True)
 
@@ -141,6 +142,7 @@ class CumStat:
 
         # ret_df = ret_df.set_index('day')
         ret_df = ret_df.reset_index()
+        del ret_df['index']
 
         ret_df.to_csv(path_to_cached_df, index=True)
 

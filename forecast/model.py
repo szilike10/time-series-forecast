@@ -12,3 +12,7 @@ class ForecastingModel:
     @abstractmethod
     def predict(self, *args, **kwargs):
         pass
+
+    @abstractmethod
+    def eval(self, *args, **kwargs):
+        pass

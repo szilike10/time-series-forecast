@@ -1,5 +1,6 @@
 frequency: 'daily'
 cumulated_csv_path: ''
+smoothing_window_size: 0
 max_prediction_length: 21
 max_encoder_length: 120
 target_variable: 'valoare'

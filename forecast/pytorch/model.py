@@ -15,11 +15,24 @@ class TFTModel(ForecastingModel):
     def __init__(self, cfg: PytorchConfig):
         super().__init__()
 
+        self.experiment_root = None
         self.best_model_path = None
         self.trainer = None
         self.cfg = cfg
 
         self.data = pd.read_csv(self.cfg.cumulated_csv_path)
+
+        if self.cfg.smoothing_window_size > 0:
+            target_names = self.data[self.cfg.group_identifiers[0]].unique()
+
+            for name in target_names:
+                name_idx = self.data[self.cfg.group_identifiers[0]] == name
+                self.data.loc[name_idx, self.cfg.target_variable] = \
+                    self.data.loc[name_idx, self.cfg.target_variable].rolling(
+                        window=self.cfg.smoothing_window_size, win_type='gaussian').sum(std=0.1)
+
+            self.data.dropna(inplace=True)
+
         # add time index
         self.data['date'] = pd.to_datetime(self.data['data'], errors='coerce')
         self.data["month"] = self.data.date.dt.month
@@ -77,13 +90,15 @@ class TFTModel(ForecastingModel):
         val_dataloader = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
 
         # configure network and trainer
-        early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=20, verbose=False, mode="min")
+        early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4,
+                                            patience=self.cfg.early_stopping_patience,
+                                            verbose=False, mode="min")
         lr_logger = LearningRateMonitor()  # log the learning rate
         logger = TensorBoardLogger("lightning_logs")  # logging results to a tensorboard
 
         self.trainer = pl.Trainer(
             max_epochs=self.cfg.max_epochs,
-            accelerator="gpu",
+            accelerator="cpu",
             enable_model_summary=True,
             gradient_clip_val=0.1,
             # limit_train_batches=50,  # coment in for training, running valiation every 30 batches
@@ -100,6 +115,10 @@ class TFTModel(ForecastingModel):
         )
 
         self.best_model_path = self.trainer.checkpoint_callback.best_model_path
+        self.experiment_root = self.best_model_path.rsplit(os.sep, 1)[0]
+
+        with open(fr'{self.experiment_root}/cfg.yml', 'w') as f:
+            f.write(str(self.cfg))
 
         with open(self.cfg.best_model_out_path, 'w') as f:
             f.write(self.best_model_path)
@@ -114,7 +133,7 @@ class TFTModel(ForecastingModel):
             x = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
 
         # calcualte mean absolute error on validation set
-        predictions = best_tft.predict(x, return_y=True, trainer_kwargs=dict(accelerator="gpu"))
+        predictions = best_tft.predict(x, return_y=True, trainer_kwargs=dict(accelerator="cpu"))
 
         if visualize:
             img_out_prefix = f'{self.best_model_path.rsplit(os.sep, 1)[0]}/{self.cfg.frequency}'
@@ -129,12 +148,14 @@ class TFTModel(ForecastingModel):
         if val is None:
             val = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
 
-        # calcualte root mean square error on validation set
-        predictions = best_tft.predict(val, return_y=True, trainer_kwargs=dict(accelerator="gpu"))
+        # calculate root mean square error on validation set
+        predictions = best_tft.predict(val, return_y=True, trainer_kwargs=dict(accelerator='cpu'))
         mse = RMSE()(predictions.output, predictions.y)
 
         print(f'RMSE = {mse}')
 
+
+        raw_predictions = best_tft.predict(val, mode='raw', return_x=True)
         if visualize:
             img_out_prefix = f'{self.best_model_path.rsplit(os.sep, 1)[0]}/{self.cfg.frequency}'
-            plot_raw_predictions(best_tft, predictions, img_out_prefix)
+            plot_raw_predictions(best_tft, raw_predictions, img_out_prefix)
