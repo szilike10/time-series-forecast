@@ -74,7 +74,7 @@ class TFTModel(ForecastingModel):
             learning_rate=self.cfg.learning_rate,
             hidden_size=self.cfg.hidden_size,
             attention_head_size=self.cfg.attention_head_size,
-            dropout=0.1,
+            dropout=self.cfg.dropout,
             hidden_continuous_size=self.cfg.hidden_continuous_size,
             loss=self.cfg.loss_fn,
             log_interval=10,
@@ -85,6 +85,11 @@ class TFTModel(ForecastingModel):
         print(f"Number of parameters in network: {self.tft.size() / 1e3:.1f}k")
 
     def fit(self):
+        # dump the training configuration
+        with open(fr'{self.experiment_root}/cfg.yml', 'w') as f:
+            f.write(str(self.cfg))
+
+
         # create dataloaders for model
         train_dataloader = self.training.to_dataloader(train=True, batch_size=self.cfg.batch_size, num_workers=0)
         val_dataloader = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
@@ -98,7 +103,7 @@ class TFTModel(ForecastingModel):
 
         self.trainer = pl.Trainer(
             max_epochs=self.cfg.max_epochs,
-            accelerator="cpu",
+            accelerator='cpu',
             enable_model_summary=True,
             gradient_clip_val=0.1,
             # limit_train_batches=50,  # coment in for training, running valiation every 30 batches
@@ -116,9 +121,6 @@ class TFTModel(ForecastingModel):
 
         self.best_model_path = self.trainer.checkpoint_callback.best_model_path
         self.experiment_root = self.best_model_path.rsplit(os.sep, 1)[0]
-
-        with open(fr'{self.experiment_root}/cfg.yml', 'w') as f:
-            f.write(str(self.cfg))
 
         with open(self.cfg.best_model_out_path, 'w') as f:
             f.write(self.best_model_path)

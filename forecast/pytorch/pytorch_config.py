@@ -28,6 +28,7 @@ class PytorchConfig(Config):
         self.hidden_size = self.yaml_obj['hidden_size']
         self.attention_head_size = self.yaml_obj['attention_head_size']
         self.hidden_continuous_size = self.yaml_obj['hidden_continuous_size']
+        self.dropout = self.yaml_obj['dropout']
         self.reduce_on_plateau_patience = self.yaml_obj['reduce_on_plateau_patience']
         self.early_stopping_patience = self.yaml_obj['early_stopping_patience']
         self.best_model_out_path = self.yaml_obj['best_model_out_path']
