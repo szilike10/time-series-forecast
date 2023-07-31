@@ -85,10 +85,6 @@ class TFTModel(ForecastingModel):
         print(f"Number of parameters in network: {self.tft.size() / 1e3:.1f}k")
 
     def fit(self):
-        # dump the training configuration
-        with open(fr'{self.experiment_root}/cfg.yml', 'w') as f:
-            f.write(str(self.cfg))
-
 
         # create dataloaders for model
         train_dataloader = self.training.to_dataloader(train=True, batch_size=self.cfg.batch_size, num_workers=0)
@@ -121,6 +117,10 @@ class TFTModel(ForecastingModel):
 
         self.best_model_path = self.trainer.checkpoint_callback.best_model_path
         self.experiment_root = self.best_model_path.rsplit(os.sep, 1)[0]
+
+        # dump the training configuration
+        with open(fr'{self.experiment_root}/cfg.yml', 'w') as f:
+            f.write(str(self.cfg))
 
         with open(self.cfg.best_model_out_path, 'w') as f:
             f.write(self.best_model_path)
