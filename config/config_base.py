@@ -14,6 +14,7 @@ class Config:
 
         pass
 
+
 if __name__ == '__main__':
     cfg = Config(r'C:\Users\bas6clj\time-series-forecast\forecast\pytorch\pytorch_config.yml')
 

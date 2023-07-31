@@ -6,6 +6,8 @@ from sklearn.metrics import mean_squared_error
 from utils.path_handling import handle_parent_path
 import numpy as np
 
+from visualization.prophet_visualization import plot_prophet_forecast
+
 
 def predict_all_cod_arts(frequency='daily', column='valoare'):
     dataloader = DataLoader(path_to_csv=r'../../data/combined.csv')
@@ -99,7 +101,7 @@ def predict_all_categories(frequency='daily', column='valoare'):
             # plt.show()
             filename = f'charts/{frequency}/{column}/categories/{category}.png'
             handle_parent_path(filename)
-            plot_prophet_forecast(pd.concat([train, val]), val_forecast, frequency, column, filename)
+            plot_prophet_forecast(pd.concat([train, val]), val_forecast, filename)
             # plt.savefig(filename, dpi=300)
 
             # fig2 = m.plot_components(forecast)
@@ -110,22 +112,6 @@ def predict_all_categories(frequency='daily', column='valoare'):
     filename = f'charts/{frequency}/{column}/prophet_category_losses.csv'
     handle_parent_path(filename)
     loss_df.to_csv(filename, index=False)
-
-
-def plot_prophet_forecast(y_data, y_pred, frequency, column, filename):
-    fig, ax = plt.subplots()
-
-    fig.set_size_inches((7, 3))
-
-    ax.plot(y_data['ds'], y_data['y'], linewidth=1)
-    ax.plot(y_pred['ds'], y_pred['yhat'], 'r', linewidth=1)
-
-    ax.plot(y_pred['ds'], y_pred['yhat_lower'], c='red', alpha=0.5, linewidth=0.5)
-    ax.plot(y_pred['ds'], y_pred['yhat_upper'], c='red', alpha=0.5, linewidth=0.5)
-    ax.fill_between(y_pred['ds'], y_pred['yhat_lower'], y_pred['yhat_upper'], color='red', alpha=0.1)
-
-    handle_parent_path(filename)
-    plt.savefig(filename, dpi=300)
 
 
 def predict_combined_products(frequency='daily', column='valoare'):
@@ -178,9 +164,9 @@ def predict_combined_products(frequency='daily', column='valoare'):
         loss_df.to_csv(filename, index=False)
 
         plot_filename = f'charts/{frequency}/{column}/prophet_forecast_combined_val.png'
-        plot_prophet_forecast(val, val_forecast, frequency, column, plot_filename)
+        plot_prophet_forecast(val, val_forecast, plot_filename)
         plot_filename = f'charts/{frequency}/{column}/prophet_forecast_combined.png'
-        plot_prophet_forecast(pd.concat([train, val]), val_forecast, frequency, column, plot_filename)
+        plot_prophet_forecast(pd.concat([train, val]), val_forecast, plot_filename)
 
 
 def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
@@ -243,7 +229,7 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
 
 
 if __name__ == '__main__':
-    # predict_all_categories(frequency='daily', column='valoare')
+    predict_all_categories(frequency='daily', column='valoare')
     # predict_all_cod_arts(frequency='daily', column='valoare')
     # predict_combined_products(frequency='weekly', column='valoare')
-    compare_to_mean(item_type='category', frequency='daily', column='valoare')
+    # compare_to_mean(item_type='category', frequency='daily', column='valoare')

@@ -149,12 +149,15 @@ class CumStat:
         return ret_df
 
     def get_daily_items(self, item_type=None, type_identifier=None, fill_missing_dates=False,
-                        start_date=None, end_date=None):
+                        start_date=None, end_date=None, filter_under=0):
         if (item_type, type_identifier) == (None, not None) \
                 or (item_type, type_identifier) == (not None, None):
             raise Exception('item_type and type identifier should either be both specfied or none of them')
 
-        ret_df = self.cumulate_daily(group_by_column=item_type, start_date=start_date, end_date=end_date, filter_under=150)
+        ret_df = self.cumulate_daily(group_by_column=item_type,
+                                     start_date=start_date,
+                                     end_date=end_date,
+                                     filter_under=filter_under)
 
         if item_type is not None:
             ret_df = ret_df.query(f'{item_type} == @type_identifier')
@@ -163,12 +166,15 @@ class CumStat:
             return ret_df
 
     def get_weekly_items(self, item_type=None, type_identifier=None, fill_missing_dates=False,
-                         start_date=None, end_date=None):
+                         start_date=None, end_date=None, filter_under=0):
         if (item_type, type_identifier) == (None, not None) \
                 or (item_type, type_identifier) == (not None, None):
             raise Exception('item_type and type identifier should either be both specfied or none of them')
 
-        ret_df = self.cumulate_weekly(group_by_column=item_type, start_date=start_date, end_date=end_date, filter_under=30)
+        ret_df = self.cumulate_weekly(group_by_column=item_type,
+                                      start_date=start_date,
+                                      end_date=end_date,
+                                      filter_under=filter_under)
 
         if item_type is not None:
             ret_df = ret_df.query(f'{item_type} == @type_identifier')
