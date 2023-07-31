@@ -1,6 +1,9 @@
+import os.path
+
 from pytorch_forecasting import QuantileLoss, RMSE
 
 from config.config_base import Config
+from data.cumulative_statistics import CumStat
 
 
 class PytorchConfig(Config):
@@ -9,13 +12,18 @@ class PytorchConfig(Config):
 
         self.frequency = self.yaml_obj['frequency']
         self.cumulated_csv_path = self.yaml_obj['cumulated_csv_path']
+        self.group_identifiers = self.yaml_obj['group_identifiers']
         self.smoothing_window_size = self.yaml_obj['smoothing_window_size']
         if self.cumulated_csv_path == '':
-            self.cumulated_csv_path = fr'../../data/cumulated_{self.frequency}_category.csv'
+            self.cumulated_csv_path = fr'{self.project_root}/data/cumulated_{self.frequency}_category.csv'
+        if not os.path.exists(self.cumulated_csv_path):
+            cumstat = CumStat(path_to_csv=f'{self.project_root}/data/combined.csv')
+            cum_func = getattr(cumstat, f'cumulate_{self.frequency}')
+            group_by_col = 'category' if 'category' in self.group_identifiers else 'cod_art'
+            cum_func(group_by_column=group_by_col)
         self.max_prediction_length = self.yaml_obj['max_prediction_length']
         self.max_encoder_length = self.yaml_obj['max_encoder_length']
         self.target_variable = self.yaml_obj['target_variable']
-        self.group_identifiers = self.yaml_obj['group_identifiers']
         self.static_categoricals = self.yaml_obj['static_categoricals']
         self.time_varying_known_categoricals = self.yaml_obj['time_varying_known_categoricals']
         self.time_varying_known_reals = self.yaml_obj['time_varying_known_reals']

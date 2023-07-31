@@ -113,7 +113,7 @@ class CumStat:
         Helper function to create the weekly cumulated DataFrame.
         """
 
-        path_to_cached_df = f'../../data/cumulated_daily_{group_by_column}.csv'
+        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_daily_{group_by_column}.csv'
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 

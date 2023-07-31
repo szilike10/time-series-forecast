@@ -1,10 +1,10 @@
 frequency: 'daily'
 cumulated_csv_path: ''
+group_identifiers: ['category']
 smoothing_window_size: 0
 max_prediction_length: 21
 max_encoder_length: 120
 target_variable: 'valoare'
-group_identifiers: ['category']
 static_categoricals: ['category']
 static_reals: []
 time_varying_known_categoricals: []
