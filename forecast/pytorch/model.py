@@ -50,9 +50,9 @@ class TFTModel(ForecastingModel):
             target=self.cfg.target_variable,
             group_ids=self.cfg.group_identifiers,
             # keep encoder length long (as it is in the validation set)
-            min_encoder_length=self.cfg.max_encoder_length // 2,
+            min_encoder_length=self.cfg.min_encoder_length,
             max_encoder_length=self.cfg.max_encoder_length,
-            min_prediction_length=1,
+            min_prediction_length=self.cfg.min_prediction_length,
             max_prediction_length=self.cfg.max_prediction_length,
             static_categoricals=self.cfg.static_categoricals,
             static_reals=[],
@@ -64,7 +64,8 @@ class TFTModel(ForecastingModel):
             add_relative_time_idx=True,
             add_target_scales=True,
             add_encoder_length=True,
-            allow_missing_timesteps=True
+            allow_missing_timesteps=True,
+            constant_fill_strategy={self.cfg.target_variable: 0.}
         )
 
         self.validation = TimeSeriesDataSet.from_dataset(self.training, self.data, predict=True, stop_randomization=True)
@@ -73,6 +74,7 @@ class TFTModel(ForecastingModel):
             self.training,
             learning_rate=self.cfg.learning_rate,
             hidden_size=self.cfg.hidden_size,
+            lstm_layers=self.cfg.lstm_layers,
             attention_head_size=self.cfg.attention_head_size,
             dropout=self.cfg.dropout,
             hidden_continuous_size=self.cfg.hidden_continuous_size,
@@ -99,7 +101,7 @@ class TFTModel(ForecastingModel):
 
         self.trainer = pl.Trainer(
             max_epochs=self.cfg.max_epochs,
-            accelerator='cpu',
+            accelerator=self.cfg.device,
             enable_model_summary=True,
             gradient_clip_val=0.1,
             # limit_train_batches=50,  # coment in for training, running valiation every 30 batches
@@ -155,7 +157,6 @@ class TFTModel(ForecastingModel):
         mse = RMSE()(predictions.output, predictions.y)
 
         print(f'RMSE = {mse}')
-
 
         raw_predictions = best_tft.predict(val, mode='raw', return_x=True)
         if visualize:

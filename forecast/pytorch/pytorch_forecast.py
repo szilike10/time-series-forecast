@@ -81,7 +81,7 @@ if __name__ == '__main__':
     logger = TensorBoardLogger("lightning_logs")  # logging results to a tensorboard
 
     trainer = pl.Trainer(
-        max_epochs=50,
+        max_epochs=1,
         accelerator="gpu",
         enable_model_summary=True,
         gradient_clip_val=0.1,

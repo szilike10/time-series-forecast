@@ -72,13 +72,19 @@ class CumStat:
         Helper function to create the weekly cumulated DataFrame.
         """
 
-        path_to_cached_df = f'../../data/cumulated_weekly_{group_by_column}.csv'
+        group_by_list = []
+        if group_by_column is not None:
+            if type(group_by_column) is list:
+                group_by_list.extend(group_by_column)
+            else:
+                group_by_list.append(group_by_column)
+        group_by_list.append('week_no')
+
+        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_weekly_{group_by_column}.csv'
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 
         self._fill_df_with_week()
-        group_by_list = [] if group_by_column is None else [group_by_column]
-        group_by_list.append('week_no')
         self.df = self.df.sort_values(by=group_by_list)
 
         ret_df = self.df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
@@ -92,16 +98,20 @@ class CumStat:
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
 
-        if filter_under > 0:
-            counted = ret_df.groupby(group_by_column).agg(count=(group_by_column, 'count')).reset_index()
-            for i in range(len(counted)):
-                count = counted['count'][i]
-                key = counted[group_by_column][i]
-                if count < filter_under:
-                    ret_df.drop(ret_df.loc[ret_df[group_by_column] == key].index, inplace=True)
+        new_col = '_'.join(group_by_list[:-1])
+        ret_df[new_col] = ret_df[group_by_list[0]]
+        for col_name in group_by_list[1:-1]:
+            ret_df[new_col] += '_' + ret_df[col_name].map(str)
 
-        ret_df = ret_df.reset_index()
-        del ret_df['index']
+        if filter_under > 0:
+            counted = ret_df.groupby(new_col, as_index=False).size()
+            for i in range(len(counted)):
+                count = int(counted['size'][i])
+                key = counted.iloc[i][new_col]
+                if count < filter_under:
+                    ret_df.drop(ret_df.loc[ret_df[new_col] == key].index, inplace=True)
+
+        ret_df = ret_df.reset_index(drop=True)
 
         ret_df.to_csv(path_to_cached_df, index=True)
 
@@ -113,13 +123,20 @@ class CumStat:
         Helper function to create the weekly cumulated DataFrame.
         """
 
-        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_daily_{group_by_column}.csv'
+        group_by_list = []
+        if group_by_column is not None:
+            if type(group_by_column) is list:
+                group_by_list.extend(group_by_column)
+            else:
+                group_by_list.append(group_by_column)
+        group_by_list.append('day')
+
+        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_daily_{"_".join(group_by_list[:-1])}.csv'
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 
         self._fill_df_with_day()
-        group_by_list = [] if group_by_column is None else [group_by_column]
-        group_by_list.append('day')
+
         self.df = self.df.sort_values(by=group_by_list)
 
         ret_df = self.df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
@@ -132,17 +149,20 @@ class CumStat:
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
 
-        if filter_under > 0:
-            counted = ret_df.groupby(group_by_column).agg(count=(group_by_column, 'count')).reset_index()
-            for i in range(len(counted)):
-                count = counted['count'][i]
-                key = counted[group_by_column][i]
-                if count < filter_under:
-                    ret_df.drop(ret_df.loc[ret_df[group_by_column] == key].index, inplace=True)
+        new_col = '_'.join(group_by_list[:-1])
+        ret_df[new_col] = ret_df[group_by_list[0]]
+        for col_name in group_by_list[1:-1]:
+            ret_df[new_col] += '_' + ret_df[col_name].map(str)
 
-        # ret_df = ret_df.set_index('day')
-        ret_df = ret_df.reset_index()
-        del ret_df['index']
+        if filter_under > 0:
+            counted = ret_df.groupby(new_col, as_index=False).size()
+            for i in range(len(counted)):
+                count = int(counted['size'][i])
+                key = counted.iloc[i][new_col]
+                if count < filter_under:
+                    ret_df.drop(ret_df.loc[ret_df[new_col] == key].index, inplace=True)
+
+        ret_df = ret_df.reset_index(drop=True)
 
         ret_df.to_csv(path_to_cached_df, index=True)
 
