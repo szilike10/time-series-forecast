@@ -16,14 +16,14 @@ class DataLoader:
         return self.cumstat.get_all_categories()
 
     def load_data(self, frequency='daily', item_type=None, type_identifier=None,
-                  value_type='valoare', start_date=None, end_date=None):
+                  value_type='valoare', start_date=None, end_date=None, min_length=0):
 
         cumulator_function = getattr(self.cumstat, f'get_{frequency}_items')
         data = cumulator_function(item_type=item_type, type_identifier=type_identifier,
-                                  start_date=start_date, end_date=end_date).reset_index()
-        data = pd.DataFrame({'ds': data['data'], 'y': data[value_type]})
-        if value_type == 'valoare':
-            data['y'] *= 0.01
+                                  start_date=start_date, end_date=end_date, filter_under=min_length).reset_index()
+        data = pd.DataFrame({'ds': pd.to_datetime(data['data']), 'y': data[value_type]})
+        # if value_type == 'valoare':
+        #     data['y'] *= 0.01
         train_split_len = int(0.8 * len(data))
         val_split_len = len(data) - train_split_len
 
