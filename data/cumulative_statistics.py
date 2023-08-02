@@ -41,6 +41,7 @@ class CumStat:
         self.df['week_no_annual'] = self.df['data'].dt.isocalendar().week
         year_adjusted = (self.df['month'] == 1).astype(int).multiply((self.df['week_no_annual'] > 50).astype(int))
         self.df['week_no'] = (self.df['year'] - year_adjusted) * 52 + self.df['week_no_annual']
+        self.df['week_no'] -= self.df['week_no'].min()
 
     def add_aggregator(self, column_name: str, aggregator_function: str):
 
@@ -80,7 +81,7 @@ class CumStat:
                 group_by_list.append(group_by_column)
         group_by_list.append('week_no')
 
-        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_weekly_{group_by_column}.csv'
+        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_weekly_{"_".join(group_by_list[:-1])}.csv'
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 
@@ -90,8 +91,10 @@ class CumStat:
         ret_df = self.df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
                                                     pret=('pret', 'mean'),
                                                     valoare=('valoare', 'sum'),
-                                                    week=('week', 'first'))
-        ret_df = ret_df.reset_index()
+                                                    furnizor=('furnizor', 'first'),
+                                                    category=('category', 'first'),
+                                                    week=('week', 'first')).reset_index()
+
         ret_df['data'] = ret_df['week']
         if start_date:
             ret_df = ret_df.query('data >= @start_date')
@@ -161,6 +164,13 @@ class CumStat:
                 key = counted.iloc[i][new_col]
                 if count < filter_under:
                     ret_df.drop(ret_df.loc[ret_df[new_col] == key].index, inplace=True)
+        #
+        # for unique_name in ret_df[new_col].unique():
+        #     idx = ret_df[ret_df[new_col] == unique_name].index.values
+        #     max_valoare = ret_df[ret_df[new_col] == unique_name].max()['valoare']
+        #     max_cantitate = ret_df[ret_df[new_col] == unique_name].max()['cantitate']
+        #     ret_df.loc[idx, 'valoare'] /= max_valoare / 10
+        #     ret_df.loc[idx, 'cantitate'] /= max_cantitate / 10
 
         ret_df = ret_df.reset_index(drop=True)
 

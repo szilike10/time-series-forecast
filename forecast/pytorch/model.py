@@ -35,18 +35,18 @@ class TFTModel(ForecastingModel):
 
         # add time index
         self.data['date'] = pd.to_datetime(self.data['data'], errors='coerce')
-        self.data["month"] = self.data.date.dt.month
+        self.data['month'] = self.data.date.dt.month
         self.data['time_idx'] = self.data['week_no'] if self.cfg.frequency == 'weekly' \
             else self.data['date'].dt.year * 365 + self.data['date'].dt.year // 4 + self.data['date'].dt.dayofyear
-        self.data["time_idx"] -= self.data["time_idx"].min()
+        self.data['time_idx'] -= self.data['time_idx'].min()
 
-        self.data['month'] = self.data.month.astype(str).astype("category")
+        self.data['month'] = self.data.month.astype(str).astype('category')
 
-        training_cutoff = self.data["time_idx"].max() - self.cfg.max_prediction_length
+        training_cutoff = self.data['time_idx'].max() - self.cfg.max_prediction_length
 
         self.training = TimeSeriesDataSet(
             self.data[lambda x: x.time_idx <= training_cutoff],
-            time_idx="time_idx",
+            time_idx='time_idx',
             target=self.cfg.target_variable,
             group_ids=self.cfg.group_identifiers,
             # keep encoder length long (as it is in the validation set)
@@ -56,11 +56,11 @@ class TFTModel(ForecastingModel):
             max_prediction_length=self.cfg.max_prediction_length,
             static_categoricals=self.cfg.static_categoricals,
             static_reals=[],
-            time_varying_known_categoricals=['month', *self.cfg.time_varying_known_categoricals],
-            time_varying_known_reals=["time_idx", *self.cfg.time_varying_known_reals],
+            time_varying_known_categoricals=[*self.cfg.time_varying_known_categoricals],
+            time_varying_known_reals=['time_idx', 'month', *self.cfg.time_varying_known_reals],
             time_varying_unknown_categoricals=[*self.cfg.time_varying_unknown_categoricals],
             time_varying_unknown_reals=[self.cfg.target_variable, *self.cfg.time_varying_unknown_reals],
-            target_normalizer=GroupNormalizer(groups=self.cfg.group_identifiers, transformation="softplus"),
+            target_normalizer=GroupNormalizer(groups=self.cfg.group_identifiers, transformation='softplus'),
             add_relative_time_idx=True,
             add_target_scales=True,
             add_encoder_length=True,
@@ -84,18 +84,17 @@ class TFTModel(ForecastingModel):
             optimizer="Ranger",
             reduce_on_plateau_patience=self.cfg.reduce_on_plateau_patience,
         )
-        print(f"Number of parameters in network: {self.tft.size() / 1e3:.1f}k")
+        print(f'Number of parameters in network: {self.tft.size() / 1e3:.1f}k')
 
     def fit(self):
-
         # create dataloaders for model
         train_dataloader = self.training.to_dataloader(train=True, batch_size=self.cfg.batch_size, num_workers=0)
         val_dataloader = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
 
         # configure network and trainer
-        early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4,
+        early_stop_callback = EarlyStopping(monitor='val_loss', min_delta=1e-4,
                                             patience=self.cfg.early_stopping_patience,
-                                            verbose=False, mode="min")
+                                            verbose=False, mode='min')
         lr_logger = LearningRateMonitor()  # log the learning rate
         logger = TensorBoardLogger("lightning_logs")  # logging results to a tensorboard
 
@@ -137,7 +136,7 @@ class TFTModel(ForecastingModel):
             x = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
 
         # calcualte mean absolute error on validation set
-        predictions = best_tft.predict(x, return_y=True, trainer_kwargs=dict(accelerator="cpu"))
+        predictions = best_tft.predict(x, return_y=True, trainer_kwargs=dict(accelerator=self.cfg.device))
 
         if visualize:
             img_out_prefix = f'{self.best_model_path.rsplit(os.sep, 1)[0]}/{self.cfg.frequency}'
@@ -153,7 +152,7 @@ class TFTModel(ForecastingModel):
             val = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
 
         # calculate root mean square error on validation set
-        predictions = best_tft.predict(val, return_y=True, trainer_kwargs=dict(accelerator='cpu'))
+        predictions = best_tft.predict(val, return_y=True, trainer_kwargs=dict(accelerator=self.cfg.device))
         mse = RMSE()(predictions.output, predictions.y)
 
         print(f'RMSE = {mse}')
