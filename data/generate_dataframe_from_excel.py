@@ -38,5 +38,8 @@ if __name__ == '__main__':
     path_to_excel = args.excel_input
     out_csv_path = args.out_csv_path
 
+    if path_to_excel is None or out_csv_path is None:
+        raise Exception('Please specify the input excel sheet path and the csv output path.')
+
     df = read_excel_sheets(path_to_excel)
     save_cmobined_csv(df, out_csv_path)
