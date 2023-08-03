@@ -12,6 +12,8 @@ def read_excel_sheets(path):
         sheet['furnizor'] = [sheet_name for _ in range(len(sheet))]
         # sheet['category'] = sheet.agg(lambda x: f"{' '.join(x['denumire'].split(' ')[:1])}", axis=1)
         sheet['category'] = sheet.agg(lambda x: f"{' '.join(re.split(r'[ .]', x['denumire'])[:1])}".lower(), axis=1)
+        sheet['um'] = sheet['um'].fillna('buc')
+        sheet['um'] = sheet['um'].map(lambda x: x.lower())
         df = pd.concat([df, sheet])
 
     df = df.reset_index()

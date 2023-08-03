@@ -144,7 +144,8 @@ class CumStat:
 
         ret_df = self.df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
                                                     pret=('pret', 'mean'),
-                                                    valoare=('valoare', 'sum')).reset_index()
+                                                    valoare=('valoare', 'sum'),
+                                                    um=('um', 'first')).reset_index()
         ret_df['data'] = ret_df['day']
 
         if start_date:
