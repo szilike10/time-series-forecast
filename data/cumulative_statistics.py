@@ -1,10 +1,13 @@
 import os.path
+from copy import deepcopy
 
 import pandas as pd
 import argparse
 import datetime
 import matplotlib.pyplot as plt
 import numpy as np
+
+from utils.data_processing import fill_missing_dates
 
 
 class CumStat:
@@ -33,15 +36,35 @@ class CumStat:
     def get_all_categories(self):
         return np.sort(self.df['category'].unique())
 
-    def _fill_df_with_day(self):
-        self.df['day'] = self.df['data']
+    def _fill_df_with_day(self, df):
+        df['day'] = df['data']
 
-    def _fill_df_with_week(self):
-        self.df['week'] = self.df['data'].dt.to_period('W').dt.start_time + pd.Timedelta(6, unit='d')
-        self.df['week_no_annual'] = self.df['data'].dt.isocalendar().week
-        year_adjusted = (self.df['month'] == 1).astype(int).multiply((self.df['week_no_annual'] > 50).astype(int))
-        self.df['week_no'] = (self.df['year'] - year_adjusted) * 52 + self.df['week_no_annual']
-        self.df['week_no'] -= self.df['week_no'].min()
+        return df
+
+    def _fill_df_with_week(self, df):
+        df['week'] = df['data'].dt.to_period('W').dt.start_time + pd.Timedelta(6, unit='d')
+        df = self._add_weekno(df)
+
+        return df
+
+    def _add_weekno(self, df):
+        df['week_no_annual'] = df['data'].dt.isocalendar().week
+        year_adjusted = (df['month'] == 1).astype(int).multiply((df['week_no_annual'] > 50).astype(int))
+        df['week_no'] = (df['year'] - year_adjusted) * 52 + df['week_no_annual']
+        df['week_no'] -= df['week_no'].min()
+
+        return df
+
+    def preprocess_data(self, df, col, filter_under=0):
+        ret_df = pd.DataFrame()
+
+        for name in df[col].unique():
+            current = df[df[col] == name]
+            if len(current) > filter_under:
+                filled = fill_missing_dates(current, 'data', ['cantitate', 'valoare'])
+                ret_df = pd.concat([ret_df, filled])
+
+        return ret_df
 
     def add_aggregator(self, column_name: str, aggregator_function: str):
 
@@ -79,20 +102,27 @@ class CumStat:
                 group_by_list.extend(group_by_column)
             else:
                 group_by_list.append(group_by_column)
-        group_by_list.append('week_no')
 
         path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_weekly_{"_".join(group_by_list[:-1])}.csv'
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 
-        self._fill_df_with_week()
-        self.df = self.df.sort_values(by=group_by_list)
+        ret_df = deepcopy(self.df)
+        if len(group_by_list) > 1:
+            new_col = '_'.join(group_by_list)
+            ret_df[new_col] = ret_df[group_by_list[0]]
+            for col_name in group_by_list[1:]:
+                ret_df[new_col] += '_' + ret_df[col_name].map(str)
+        else:
+            new_col = 'data'
 
-        ret_df = self.df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
+        ret_df = self.preprocess_data(ret_df, new_col, filter_under)
+        ret_df = self._fill_df_with_week(ret_df)
+        group_by_list.append('week_no')
+        ret_df = ret_df.sort_values(by=group_by_list)
+        ret_df = ret_df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
                                                     pret=('pret', 'mean'),
                                                     valoare=('valoare', 'sum'),
-                                                    furnizor=('furnizor', 'first'),
-                                                    category=('category', 'first'),
                                                     week=('week', 'first')).reset_index()
 
         ret_df['data'] = ret_df['week']
@@ -101,12 +131,7 @@ class CumStat:
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
 
-        new_col = '_'.join(group_by_list[:-1])
-        ret_df[new_col] = ret_df[group_by_list[0]]
-        for col_name in group_by_list[1:-1]:
-            ret_df[new_col] += '_' + ret_df[col_name].map(str)
-
-        if filter_under > 0:
+        if new_col != 'data' and filter_under > 0:
             counted = ret_df.groupby(new_col, as_index=False).size()
             for i in range(len(counted)):
                 count = int(counted['size'][i])
@@ -123,7 +148,7 @@ class CumStat:
     def cumulate_daily(self, group_by_column=None, start_date=None, end_date=None, filter_under=0):
 
         """
-        Helper function to create the weekly cumulated DataFrame.
+        Helper function to create the daily cumulated DataFrame.
         """
 
         group_by_list = []
@@ -132,17 +157,25 @@ class CumStat:
                 group_by_list.extend(group_by_column)
             else:
                 group_by_list.append(group_by_column)
-        group_by_list.append('day')
 
         path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_daily_{"_".join(group_by_list[:-1])}.csv'
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 
-        self._fill_df_with_day()
+        ret_df = deepcopy(self.df)
+        if len(group_by_list) > 1:
+            new_col = '_'.join(group_by_list)
+            ret_df[new_col] = ret_df[group_by_list[0]]
+            for col_name in group_by_list[1:]:
+                ret_df[new_col] += '_' + ret_df[col_name].map(str)
+        else:
+            new_col = 'data'
 
-        self.df = self.df.sort_values(by=group_by_list)
-
-        ret_df = self.df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
+        ret_df = self.preprocess_data(ret_df, new_col, filter_under)
+        ret_df = self._fill_df_with_day(ret_df)
+        group_by_list.append('day')
+        ret_df = ret_df.sort_values(by=group_by_list)
+        ret_df = ret_df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
                                                     pret=('pret', 'mean'),
                                                     valoare=('valoare', 'sum'),
                                                     um=('um', 'first')).reset_index()
@@ -153,12 +186,10 @@ class CumStat:
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
 
-        new_col = '_'.join(group_by_list[:-1])
-        ret_df[new_col] = ret_df[group_by_list[0]]
-        for col_name in group_by_list[1:-1]:
-            ret_df[new_col] += '_' + ret_df[col_name].map(str)
-
-        if filter_under > 0:
+        # TODO: correct filtering
+        if new_col != 'data' and filter_under > 0:
+            new_col = '-'.join(group_by_list)
+            tmp_df = ret_df
             counted = ret_df.groupby(new_col, as_index=False).size()
             for i in range(len(counted)):
                 count = int(counted['size'][i])
