@@ -1,0 +1,7 @@
+combined_csv_path: C:\Users\bas6clj\time-series-forecast\data\combined.csv
+frequency: 'daily'
+group_identifiers: ['category']
+smoothing_window_size: 0
+conf_alpha: 0.05
+start_date: '2022-01-01'
+end_date: '2023-01-01'
