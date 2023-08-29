@@ -71,11 +71,14 @@ def plot_autocorrelation(frequency, column='valoare'):
 def plot_forecast(y_true, y_pred, filename, draw_plot=False):
     fig, ax = plt.subplots()
 
-    ax.plot(y_true['ds'], y_true['y'], linewidth=1)
-    ax.plot(y_pred['ds'], y_pred['y'], 'r', linewidth=1)
+    fig.set_size_inches((7, 3.5))
+    plt.tight_layout()
 
-    ax.plot(y_pred['ds'], y_pred['lower y'], c='red', alpha=0.5, linewidth=0.5)
-    ax.plot(y_pred['ds'], y_pred['upper y'], c='red', alpha=0.5, linewidth=0.5)
+    ax.plot(y_true['ds'], y_true['y'], linewidth=1.5)
+    ax.plot(y_pred['ds'], y_pred['y'], 'tab:orange', linewidth=1.5)
+
+    ax.plot(y_pred['ds'], y_pred['lower y'], c='tab:orange', alpha=0.5, linewidth=0.5)
+    ax.plot(y_pred['ds'], y_pred['upper y'], c='tab:orange', alpha=0.5, linewidth=0.5)
     ax.fill_between(y_pred['ds'], y_pred['lower y'], y_pred['upper y'], color='red', alpha=0.1)
 
     handle_parent_path(filename)
@@ -118,7 +121,9 @@ def predict_combined_products(frequency='daily', column='valoare'):
     ax.plot(data['ds'], data['y'])
 
     loss = mean_squared_error(val['y'], y_pred_df['y'])
+    rmse = np.sqrt(loss)
     print('loss = ', loss)
+    print('rmse = ', rmse)
 
     loss_df = pd.DataFrame.from_dict(
         {'name': [column], 'loss': [loss], 'adjusted_loss': [loss * 0.000001 * ARMAmodel.bic * ARMAmodel.aic]})
@@ -415,7 +420,7 @@ if __name__ == '__main__':
     frequency = 'daily'
     column = 'valoare'
 
-    plot_autocorrelation(frequency=frequency, column=column)
+    # plot_autocorrelation(frequency=frequency, column=column)
     predict_combined_products(frequency=frequency, column=column)
 
     # grid_search_item_types(item_type='category', frequency=frequency, column=column)

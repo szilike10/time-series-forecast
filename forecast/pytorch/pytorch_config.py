@@ -56,6 +56,8 @@ class PytorchConfig(Config):
         self.start_date = pd.to_datetime(self.yaml_obj.get('start_date', None))
         self.end_date = pd.to_datetime(self.yaml_obj.get('end_date', None))
 
+        self.timeseries_length = (self.end_date - self.start_date).days
+
         loss_fn_dict = {
             'QuantileLoss': QuantileLoss(),
             'RMSE': RMSE(),

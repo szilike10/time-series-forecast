@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from prophet import Prophet
 from sklearn.metrics import mean_squared_error
@@ -54,8 +55,9 @@ class ProphetModel(ForecastingModel):
 
         val_forecast = self.model.predict(val)
         loss = mean_squared_error(val['y'], val_forecast['yhat'])
+        rmse = np.sqrt(loss)
 
-        print(f'MSE: {loss}.')
+        print(f'RMSE: {rmse}.')
 
         filename = f'{self.cfg.project_root}/forecast/prophet/charts/train/' \
                    f'{self.cfg.frequency}/valoare/{self.cfg.group_by_col}/{self.last_trained_group}.png'

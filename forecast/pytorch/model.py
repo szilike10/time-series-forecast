@@ -34,6 +34,9 @@ class TFTModel(ForecastingModel):
 
             self.data.dropna(inplace=True)
 
+        encoder_length = int(0.8 * self.cfg.timeseries_length)
+        decoder_length = self.cfg.timeseries_length - encoder_length
+
         # add time index
         self.data['date'] = pd.to_datetime(self.data['data'], errors='coerce')
         self.data['day_of_week'] = self.data['date'].dt.dayofweek
@@ -50,6 +53,7 @@ class TFTModel(ForecastingModel):
         # self.data['month'] = self.data.month.astype(str).astype('category')
 
         training_cutoff = self.data['time_idx'].max() - self.cfg.max_prediction_length
+        training_cutoff = self.data['time_idx'].max() - decoder_length
 
         self.training = TimeSeriesDataSet(
             self.data[lambda x: x.time_idx <= training_cutoff],
@@ -57,10 +61,10 @@ class TFTModel(ForecastingModel):
             target=self.cfg.target_variable,
             group_ids=self.cfg.group_identifiers,
             # keep encoder length long (as it is in the validation set)
-            min_encoder_length=self.cfg.min_encoder_length,
-            max_encoder_length=self.cfg.max_encoder_length,
-            min_prediction_length=self.cfg.min_prediction_length,
-            max_prediction_length=self.cfg.max_prediction_length,
+            min_encoder_length=encoder_length//2,
+            max_encoder_length=encoder_length,
+            min_prediction_length=decoder_length//2,
+            max_prediction_length=decoder_length,
             static_categoricals=[*self.cfg.group_identifiers, *self.cfg.static_categoricals],
             static_reals=[],
             time_varying_known_categoricals=[*self.cfg.time_varying_known_categoricals],
