@@ -12,6 +12,8 @@ class StatsmodelsConfig(Config):
             self.combined_csv_path = fr'{self.project_root}/data/combined.csv'
         self.frequency = self.yaml_obj.get('frequency', None)
         self.group_identifiers = self.yaml_obj.get('group_identifiers', None)
+        self.type_identifier = self.yaml_obj.get('type_identifier', None)
+        self.target = self.yaml_obj.get('target', None)
         self.smoothing_window_size = self.yaml_obj.get('smoothing_window_size', None)
         self.timeseries_min_length = self.yaml_obj['timeseries_min_length']
         self.conf_alpha = self.yaml_obj.get('conf_alpha', None)

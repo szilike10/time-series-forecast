@@ -44,7 +44,8 @@ class CumStat:
     def _fill_df_with_week(self, df):
         df['year'] = df['data'].dt.year
         df['month'] = df['data'].dt.month
-        df['week'] = df['data'].dt.to_period('W-MON').dt.start_time
+        df['week'] = df['data'].dt.to_period('W-SUN')
+        df['week'] = df['week'].dt.start_time
         df['week_no_annual'] = df['data'].dt.isocalendar().week
         year_adjusted = (df['month'] == 1).astype(int).multiply((df['week_no_annual'] == 52).astype(int))
         df['week_no'] = (df['year'] - year_adjusted) * 52 + df['week_no_annual']
@@ -52,15 +53,15 @@ class CumStat:
 
         return df
 
-    def post_process_data(self, df, col, frequency):
+    def post_process_data(self, df, col, date_col, frequency):
         ret_df = pd.DataFrame()
 
         if col == 'data':
-            return fill_missing_dates(df, 'data', ['cantitate', 'valoare'], frequency)
+            return fill_missing_dates(df, date_col, ['cantitate', 'valoare'], frequency)
 
         for name in df[col].unique():
             current = df[df[col] == name]
-            filled = fill_missing_dates(current, 'data', ['cantitate', 'valoare'], frequency)
+            filled = fill_missing_dates(current, date_col, ['cantitate', 'valoare'], frequency)
             ret_df = pd.concat([ret_df, filled])
 
         return ret_df
@@ -130,15 +131,15 @@ class CumStat:
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
 
-        ret_df = self.post_process_data(ret_df, new_col, 'W')
-        ret_df = self._fill_df_with_week(ret_df)
-
         if new_col != 'data' and filter_under > 0:
             ret_df['clipped'] = ret_df['cantitate'].clip(upper=1)
             ret_df[new_col] = ret_df[new_col]
             for value in ret_df[new_col].unique():
                 if ret_df[ret_df[new_col] == value]['clipped'].sum() < filter_under:
                     ret_df.drop(ret_df.loc[ret_df[new_col] == value].index, inplace=True)
+
+        ret_df = self.post_process_data(ret_df, new_col, 'week', 'weekly')
+        ret_df = self._fill_df_with_week(ret_df)
 
         ret_df = ret_df.reset_index(drop=True)
 
@@ -159,7 +160,7 @@ class CumStat:
             else:
                 group_by_list.append(group_by_column)
 
-        suffix = '' if len(group_by_list) != 0 else '_' + '_'.join(group_by_list)
+        suffix = '' if len(group_by_list) == 0 else '_' + '_'.join(group_by_list)
         path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_daily{suffix}.csv'
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
@@ -187,14 +188,14 @@ class CumStat:
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
 
-        ret_df = self.post_process_data(ret_df, new_col, 'D')
-        ret_df = self._fill_df_with_day(ret_df)
-
         if new_col != 'data' and filter_under > 0:
             ret_df['clipped'] = ret_df['cantitate'].clip(upper=1)
             for value in ret_df[new_col].unique():
                 if ret_df[ret_df[new_col] == value]['clipped'].sum() < filter_under:
                     ret_df.drop(ret_df.loc[ret_df[new_col] == value].index, inplace=True)
+
+        ret_df = self.post_process_data(ret_df, new_col, 'day', 'daily')
+        ret_df = self._fill_df_with_day(ret_df)
 
         #
         # for unique_name in ret_df[new_col].unique():
@@ -206,14 +207,16 @@ class CumStat:
 
         ret_df = ret_df.reset_index(drop=True)
 
+        ret_df['tmp'] = ['all' for _ in range(len(ret_df))]
+
         ret_df.to_csv(path_to_cached_df, index=True)
 
         return ret_df
 
     def get_daily_items(self, item_type=None, type_identifier=None, fill_missing_dates=False,
                         start_date=None, end_date=None, filter_under=0):
-        if (item_type, type_identifier) == (None, not None) \
-                or (item_type, type_identifier) == (not None, None):
+        if (item_type == None, type_identifier == None) == (True, False) \
+                or (item_type == None, type_identifier == None) == (False, True):
             raise Exception('item_type and type identifier should either be both specfied or none of them')
 
         ret_df = self.cumulate_daily(group_by_column=item_type,
