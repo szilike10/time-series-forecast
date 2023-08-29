@@ -29,18 +29,22 @@ class TFTModel(ForecastingModel):
                 name_idx = self.data[self.cfg.group_identifiers[0]] == name
                 self.data.loc[name_idx, self.cfg.target_variable] = \
                     self.data.loc[name_idx, self.cfg.target_variable].rolling(
-                        window=self.cfg.smoothing_window_size, win_type='gaussian').sum(std=0.1)
+                        window=self.cfg.smoothing_window_size, win_type='gaussian').sum(std=0.2)
 
             self.data.dropna(inplace=True)
 
         # add time index
         self.data['date'] = pd.to_datetime(self.data['data'], errors='coerce')
         self.data['month'] = self.data.date.dt.month
-        self.data['time_idx'] = self.data['week_no'] if self.cfg.frequency == 'weekly' \
-            else self.data['date'].dt.year * 365 + self.data['date'].dt.year // 4 + self.data['date'].dt.dayofyear
+        if self.cfg.frequency == 'weekly':
+            self.data['time_idx'] = self.data['week_no']
+        else:
+            self.data['time_idx'] = self.data['date'].dt.year * 365
+            self.data['time_idx'] += self.data['date'].dt.year // 4
+            self.data['time_idx'] += self.data['date'].dt.dayofyear
         self.data['time_idx'] -= self.data['time_idx'].min()
 
-        self.data['month'] = self.data.month.astype(str).astype('category')
+        # self.data['month'] = self.data.month.astype(str).astype('category')
 
         training_cutoff = self.data['time_idx'].max() - self.cfg.max_prediction_length
 
@@ -54,7 +58,7 @@ class TFTModel(ForecastingModel):
             max_encoder_length=self.cfg.max_encoder_length,
             min_prediction_length=self.cfg.min_prediction_length,
             max_prediction_length=self.cfg.max_prediction_length,
-            static_categoricals=self.cfg.static_categoricals,
+            static_categoricals=[*self.cfg.group_identifiers, *self.cfg.static_categoricals],
             static_reals=[],
             time_varying_known_categoricals=[*self.cfg.time_varying_known_categoricals],
             time_varying_known_reals=['time_idx', 'month', *self.cfg.time_varying_known_reals],
@@ -152,12 +156,12 @@ class TFTModel(ForecastingModel):
             val = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
 
         # calculate root mean square error on validation set
-        predictions = best_tft.predict(val, return_y=True, trainer_kwargs=dict(accelerator=self.cfg.device))
+        predictions = best_tft.predict(val, return_y=True, trainer_kwargs=dict(accelerator=self.cfg.device), return_x=True)
         mse = RMSE()(predictions.output, predictions.y)
 
         print(f'RMSE = {mse}')
 
-        raw_predictions = best_tft.predict(val, mode='raw', return_x=True)
+        raw_predictions = best_tft.predict(val, mode='raw', return_x=True, return_y=True)
         if visualize:
             img_out_prefix = f'{self.best_model_path.rsplit(os.sep, 1)[0]}/{self.cfg.frequency}'
             plot_raw_predictions(best_tft, raw_predictions, img_out_prefix)

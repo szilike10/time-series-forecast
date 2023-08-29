@@ -24,7 +24,7 @@ class ProphetModel(ForecastingModel):
         self.val = None
         self.last_trained_group = None
 
-    def fit(self, group_name):
+    def fit(self, group_name=None):
         self.train, self.val = self.cfg.dataloader.load_data(frequency=self.cfg.frequency,
                                                              item_type=self.cfg.group_by_col,
                                                              type_identifier=group_name,
@@ -60,6 +60,12 @@ class ProphetModel(ForecastingModel):
         filename = f'{self.cfg.project_root}/forecast/prophet/charts/train/' \
                    f'{self.cfg.frequency}/valoare/{self.cfg.group_by_col}/{self.last_trained_group}.png'
         plot_prophet_forecast(pd.concat([self.train, self.val]),
+                              val_forecast,
+                              filename)
+
+        filename = f'{self.cfg.project_root}/forecast/prophet/charts/train/' \
+                   f'{self.cfg.frequency}/valoare/{self.cfg.group_by_col}/{self.last_trained_group}_val.png'
+        plot_prophet_forecast(self.val,
                               val_forecast,
                               filename)
 
