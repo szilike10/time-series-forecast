@@ -18,9 +18,10 @@ class PytorchConfig(Config):
         self.timeseries_min_length = self.yaml_obj.get('timeseries_min_length', None)
         self.start_date = self.yaml_obj.get('start_date', None)
         self.end_date = self.yaml_obj.get('end_date', None)
+        group_by_list = self.group_identifiers if self.group_identifiers != ['tmp'] else []
+        suffix = '' if len(group_by_list) == 0 else '_' + '_'.join(group_by_list)
         if self.cumulated_csv_path == '':
-            self.cumulated_csv_path = fr'{self.project_root}/data/cumulated_{self.frequency}_' \
-                                      fr'{"_".join(self.group_identifiers)}.csv'
+            self.cumulated_csv_path = fr'{self.project_root}/data/cumulated_{self.frequency}{suffix}.csv'
         if not os.path.exists(self.cumulated_csv_path):
             cumstat = CumStat(path_to_csv=f'{self.project_root}/data/combined.csv')
             cum_func = getattr(cumstat, f'cumulate_{self.frequency}')

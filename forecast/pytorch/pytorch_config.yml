@@ -1,14 +1,14 @@
 frequency: 'daily'
 cumulated_csv_path: ''
-group_identifiers: ['category']
+group_identifiers: ['tmp']
 smoothing_window_size: 0
-timeseries_min_length: 100
+timeseries_min_length: 200
 min_prediction_length: 30
 max_prediction_length: 30
-min_encoder_length: 100
-max_encoder_length: 150
+min_encoder_length: 200
+max_encoder_length: 300
 target_variable: 'valoare'
-static_categoricals: ['category']
+static_categoricals: ['tmp']
 static_reals: []
 time_varying_known_categoricals: []
 time_varying_known_reals: ['pret', 'month']
