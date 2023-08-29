@@ -322,9 +322,10 @@ def grid_search_item_types(item_type=None, frequency='daily', column='valoare'):
                                           item_type=item_type,
                                           type_identifier=type_identifier,
                                           start_date=pd.to_datetime('2022-01-01'),
-                                          end_date=pd.to_datetime('2023-01-01'))
+                                          end_date=pd.to_datetime('2023-01-01'),
+                                          min_length=20)
 
-        if len(train) + len(val) > 100:
+        if len(train) + len(val) > 0:
             relevant_type_identifiers.append(type_identifier)
 
             print(type_identifier)
@@ -411,12 +412,12 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
 
 
 if __name__ == '__main__':
-    frequency = 'weekly'
+    frequency = 'daily'
     column = 'valoare'
 
     # plot_autocorrelation(frequency=frequency, column=column)
-    # predict_combined_products(frequency=frequency, column=column)
+    predict_combined_products(frequency=frequency, column=column)
 
-    grid_search_item_types(item_type='category', frequency=frequency, column=column)
+    # grid_search_item_types(item_type='category', frequency=frequency, column=column)
 
     # compare_to_mean(item_type='category', frequency=frequency, column=column)

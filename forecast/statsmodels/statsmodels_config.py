@@ -13,6 +13,7 @@ class StatsmodelsConfig(Config):
         self.frequency = self.yaml_obj.get('frequency', None)
         self.group_identifiers = self.yaml_obj.get('group_identifiers', None)
         self.smoothing_window_size = self.yaml_obj.get('smoothing_window_size', None)
+        self.timeseries_min_length = self.yaml_obj['timeseries_min_length']
         self.conf_alpha = self.yaml_obj.get('conf_alpha', None)
         self.start_date = pd.to_datetime(self.yaml_obj.get('start_date', None))
         self.end_date = pd.to_datetime(self.yaml_obj.get('end_date', None))

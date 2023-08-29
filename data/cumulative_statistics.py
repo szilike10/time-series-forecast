@@ -25,9 +25,7 @@ class CumStat:
 
         else:
             self.df = df
-        self.df['data'] = pd.to_datetime(self.df['data'])
-        self.df['year'] = self.df['data'].dt.year
-        self.df['month'] = self.df['data'].dt.month
+        self.df['data'] = pd.to_datetime(self.df['data'], format='%Y-%m-%d')
         self.aggregators = []
 
     def get_all_article_ids(self):
@@ -37,32 +35,33 @@ class CumStat:
         return np.sort(self.df['category'].unique())
 
     def _fill_df_with_day(self, df):
+        df['year'] = df['data'].dt.year
+        df['month'] = df['data'].dt.month
         df['day'] = df['data']
 
         return df
 
     def _fill_df_with_week(self, df):
-        df['week'] = df['data'].dt.to_period('W').dt.start_time + pd.Timedelta(6, unit='d')
-        df = self._add_weekno(df)
-
-        return df
-
-    def _add_weekno(self, df):
+        df['year'] = df['data'].dt.year
+        df['month'] = df['data'].dt.month
+        df['week'] = df['data'].dt.to_period('W-MON').dt.start_time
         df['week_no_annual'] = df['data'].dt.isocalendar().week
-        year_adjusted = (df['month'] == 1).astype(int).multiply((df['week_no_annual'] > 50).astype(int))
+        year_adjusted = (df['month'] == 1).astype(int).multiply((df['week_no_annual'] == 52).astype(int))
         df['week_no'] = (df['year'] - year_adjusted) * 52 + df['week_no_annual']
         df['week_no'] -= df['week_no'].min()
 
         return df
 
-    def preprocess_data(self, df, col, filter_under=0):
+    def post_process_data(self, df, col, frequency):
         ret_df = pd.DataFrame()
+
+        if col == 'data':
+            return fill_missing_dates(df, 'data', ['cantitate', 'valoare'], frequency)
 
         for name in df[col].unique():
             current = df[df[col] == name]
-            if len(current) > filter_under:
-                filled = fill_missing_dates(current, 'data', ['cantitate', 'valoare'])
-                ret_df = pd.concat([ret_df, filled])
+            filled = fill_missing_dates(current, 'data', ['cantitate', 'valoare'], frequency)
+            ret_df = pd.concat([ret_df, filled])
 
         return ret_df
 
@@ -103,12 +102,13 @@ class CumStat:
             else:
                 group_by_list.append(group_by_column)
 
-        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_weekly_{"_".join(group_by_list[:-1])}.csv'
+        suffix = '' if len(group_by_list) == 0 else '_' + '_'.join(group_by_list)
+        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_weekly{suffix}.csv'
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 
         ret_df = deepcopy(self.df)
-        if len(group_by_list) > 1:
+        if len(group_by_list) > 0:
             new_col = '_'.join(group_by_list)
             ret_df[new_col] = ret_df[group_by_list[0]]
             for col_name in group_by_list[1:]:
@@ -116,28 +116,29 @@ class CumStat:
         else:
             new_col = 'data'
 
-        ret_df = self.preprocess_data(ret_df, new_col, filter_under)
         ret_df = self._fill_df_with_week(ret_df)
         group_by_list.append('week_no')
-        ret_df = ret_df.sort_values(by=group_by_list)
         ret_df = ret_df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
-                                                    pret=('pret', 'mean'),
-                                                    valoare=('valoare', 'sum'),
-                                                    week=('week', 'first')).reset_index()
-
+                                                   pret=('pret', 'mean'),
+                                                   valoare=('valoare', 'sum'),
+                                                   week=('week', 'first')).reset_index()
         ret_df['data'] = ret_df['week']
+        ret_df = ret_df.sort_values(by=group_by_list)
+
         if start_date:
             ret_df = ret_df.query('data >= @start_date')
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
 
+        ret_df = self.post_process_data(ret_df, new_col, 'W')
+        ret_df = self._fill_df_with_week(ret_df)
+
         if new_col != 'data' and filter_under > 0:
-            counted = ret_df.groupby(new_col, as_index=False).size()
-            for i in range(len(counted)):
-                count = int(counted['size'][i])
-                key = counted.iloc[i][new_col]
-                if count < filter_under:
-                    ret_df.drop(ret_df.loc[ret_df[new_col] == key].index, inplace=True)
+            ret_df['clipped'] = ret_df['cantitate'].clip(upper=1)
+            ret_df[new_col] = ret_df[new_col]
+            for value in ret_df[new_col].unique():
+                if ret_df[ret_df[new_col] == value]['clipped'].sum() < filter_under:
+                    ret_df.drop(ret_df.loc[ret_df[new_col] == value].index, inplace=True)
 
         ret_df = ret_df.reset_index(drop=True)
 
@@ -158,12 +159,13 @@ class CumStat:
             else:
                 group_by_list.append(group_by_column)
 
-        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_daily_{"_".join(group_by_list[:-1])}.csv'
+        suffix = '' if len(group_by_list) != 0 else '_' + '_'.join(group_by_list)
+        path_to_cached_df = f'{os.environ["PROJECT_ROOT"]}/data/cumulated_daily{suffix}.csv'
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 
         ret_df = deepcopy(self.df)
-        if len(group_by_list) > 1:
+        if len(group_by_list) > 0:
             new_col = '_'.join(group_by_list)
             ret_df[new_col] = ret_df[group_by_list[0]]
             for col_name in group_by_list[1:]:
@@ -171,31 +173,29 @@ class CumStat:
         else:
             new_col = 'data'
 
-        ret_df = self.preprocess_data(ret_df, new_col, filter_under)
         ret_df = self._fill_df_with_day(ret_df)
         group_by_list.append('day')
-        ret_df = ret_df.sort_values(by=group_by_list)
         ret_df = ret_df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
                                                     pret=('pret', 'mean'),
                                                     valoare=('valoare', 'sum'),
                                                     um=('um', 'first')).reset_index()
         ret_df['data'] = ret_df['day']
+        ret_df = ret_df.sort_values(by=group_by_list)
 
         if start_date:
             ret_df = ret_df.query('data >= @start_date')
         if end_date:
             ret_df = ret_df.query('data <= @end_date')
 
-        # TODO: correct filtering
+        ret_df = self.post_process_data(ret_df, new_col, 'D')
+        ret_df = self._fill_df_with_day(ret_df)
+
         if new_col != 'data' and filter_under > 0:
-            new_col = '-'.join(group_by_list)
-            tmp_df = ret_df
-            counted = ret_df.groupby(new_col, as_index=False).size()
-            for i in range(len(counted)):
-                count = int(counted['size'][i])
-                key = counted.iloc[i][new_col]
-                if count < filter_under:
-                    ret_df.drop(ret_df.loc[ret_df[new_col] == key].index, inplace=True)
+            ret_df['clipped'] = ret_df['cantitate'].clip(upper=1)
+            for value in ret_df[new_col].unique():
+                if ret_df[ret_df[new_col] == value]['clipped'].sum() < filter_under:
+                    ret_df.drop(ret_df.loc[ret_df[new_col] == value].index, inplace=True)
+
         #
         # for unique_name in ret_df[new_col].unique():
         #     idx = ret_df[ret_df[new_col] == unique_name].index.values
