@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import lightning.pytorch as pl
+import torch
 
 from pytorch_forecasting import TimeSeriesDataSet, GroupNormalizer, TemporalFusionTransformer, RMSE
 from forecast.model import ForecastingModel
@@ -35,6 +36,8 @@ class TFTModel(ForecastingModel):
 
         # add time index
         self.data['date'] = pd.to_datetime(self.data['data'], errors='coerce')
+        self.data['day_of_week'] = self.data['date'].dt.dayofweek
+        self.data['day_of_month'] = self.data['date'].dt.day
         self.data['month'] = self.data.date.dt.month
         if self.cfg.frequency == 'weekly':
             self.data['time_idx'] = self.data['week_no']
@@ -65,11 +68,11 @@ class TFTModel(ForecastingModel):
             time_varying_unknown_categoricals=[*self.cfg.time_varying_unknown_categoricals],
             time_varying_unknown_reals=[self.cfg.target_variable, *self.cfg.time_varying_unknown_reals],
             target_normalizer=GroupNormalizer(groups=self.cfg.group_identifiers, transformation='softplus'),
-            add_relative_time_idx=True,
+            # add_relative_time_idx=True,
             add_target_scales=True,
-            add_encoder_length=True,
-            allow_missing_timesteps=True,
-            constant_fill_strategy={self.cfg.target_variable: 0.}
+            # add_encoder_length=True,
+            # allow_missing_timesteps=True,
+            # constant_fill_strategy={self.cfg.target_variable: 0.}
         )
 
         self.validation = TimeSeriesDataSet.from_dataset(self.training, self.data, predict=True, stop_randomization=True)
@@ -87,10 +90,12 @@ class TFTModel(ForecastingModel):
             # uncomment for learning rate finder and otherwise, e.g. to 10 for logging every 10 batches
             optimizer="Ranger",
             reduce_on_plateau_patience=self.cfg.reduce_on_plateau_patience,
+            share_single_variable_networks=True
         )
         print(f'Number of parameters in network: {self.tft.size() / 1e3:.1f}k')
 
     def fit(self):
+        torch.set_float32_matmul_precision('medium')
         # create dataloaders for model
         train_dataloader = self.training.to_dataloader(train=True, batch_size=self.cfg.batch_size, num_workers=0)
         val_dataloader = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
