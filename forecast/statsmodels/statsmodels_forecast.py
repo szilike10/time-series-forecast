@@ -102,7 +102,7 @@ def predict_combined_products(frequency='daily', column='valoare'):
                                       end_date=pd.to_datetime('2023-01-01'))
 
     p, d, q = (6, 0, 6) if frequency == 'daily' else (2, 1, 1)
-    P, D, Q, S = (2, 1, 2, 7) if frequency == 'daily' else (2, 1, 2, 4)
+    P, D, Q, S = (2, 0, 2, 7) if frequency == 'daily' else (2, 1, 2, 4)
 
     ARMAmodel = SARIMAX(train['y'], order=(p, d, q), seasonal_order=(P, D, Q, S))
     ARMAmodel = ARMAmodel.fit()
@@ -137,7 +137,7 @@ def predict_combined_products(frequency='daily', column='valoare'):
     handle_parent_path(loss_df_filename)
     loss_df.to_csv(loss_df_filename, index=False)
 
-    train_val_plot_filename = f'charts/{frequency}/{column}/statsmodels_{p}_{d}_{q}___{P}_{D}_{Q}_{S}.png'
+    train_val_plot_filename = f'charts/{frequency}/{column}/statsmodels_combined_{p}_{d}_{q}___{P}_{D}_{Q}_{S}.png'
     plot_forecast(pd.concat([train, val]), y_pred_df, train_val_plot_filename, rmse)
 
     val_plot_filename = f'charts/{frequency}/{column}/statsmodels_combined_{p}_{d}_{q}___{P}_{D}_{Q}_{S}_val.png'
@@ -423,10 +423,10 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
 
 
 if __name__ == '__main__':
-    frequency = 'weekly'
+    frequency = 'daily'
     column = 'valoare'
 
-    # plot_autocorrelation(frequency=frequency, column=column)
+    plot_autocorrelation(frequency=frequency, column=column)
     predict_combined_products(frequency=frequency, column=column)
 
     # grid_search_item_types(item_type='category', frequency=frequency, column=column)
