@@ -190,7 +190,7 @@ class CumStat:
             ret_df = ret_df.query('data <= @end_date')
 
         if new_col != 'data' and filter_under > 0:
-            ret_df['clipped'] = ret_df['cantitate'].clip(upper=1)
+            ret_df['clipped'] = ret_df['cantitate'].clip(lower=1, upper=1)
             for value in ret_df[new_col].unique():
                 if ret_df[ret_df[new_col] == value]['clipped'].sum() < filter_under:
                     ret_df.drop(ret_df.loc[ret_df[new_col] == value].index, inplace=True)
