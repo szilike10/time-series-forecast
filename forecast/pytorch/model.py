@@ -175,4 +175,5 @@ class TFTModel(ForecastingModel):
         raw_predictions = best_tft.predict(val, mode='raw', return_x=True, return_y=True)
         if visualize:
             img_out_prefix = f'{self.best_model_path.rsplit(os.sep, 1)[0]}/{self.cfg.frequency}'
-            plot_raw_predictions(best_tft, raw_predictions, img_out_prefix, rmse, quantiles)
+            plot_raw_predictions(best_tft, raw_predictions, img_out_prefix, rmse,
+                                 self.cfg.start_date, self.cfg.frequency, quantiles)
