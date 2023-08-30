@@ -25,6 +25,8 @@ class StatModel(ForecastingModel):
 
         self.type_identifier = self.cfg.type_identifier
 
+        self.data = pd.read_csv(self.cfg.cumulated_csv_path)
+
         self.train, self.val = self.dataloader.load_data(frequency=self.cfg.frequency,
                                                          value_type=self.cfg.target,
                                                          item_type='_'.join(self.cfg.group_identifiers),
@@ -147,27 +149,23 @@ class StatModel(ForecastingModel):
     def eval(self, model=None):
 
         if model is None:
-            uniques = self.dataloader.get_unique(self.cfg.frequency,
-                                                 self.cfg.group_identifiers,
-                                                 self.cfg.timeseries_min_length)
-
-            for name in uniques:
-                print(name)
+            for identifier in self.data['_'.join(self.cfg.group_identifiers)].unique():
+                print(identifier)
 
                 train, val = self.dataloader.load_data(frequency=self.cfg.frequency,
                                                        value_type=self.cfg.target,
                                                        item_type='_'.join(self.cfg.group_identifiers),
-                                                       type_identifier=name,
+                                                       type_identifier=identifier,
                                                        start_date=self.cfg.start_date,
                                                        end_date=self.cfg.end_date,
                                                        min_length=self.cfg.timeseries_min_length)
                 p, d, q = (6, 0, 6) if self.cfg.frequency == 'daily' else (2, 1, 1)
                 P, D, Q, S = (2, 0, 2, 7) if self.cfg.frequency == 'daily' else (2, 1, 2, 4)
 
-                model = SARIMAX(self.train['y'], order=(p, d, q), seasonal_order=(P, D, Q, S))
+                model = SARIMAX(train['y'], order=(p, d, q), seasonal_order=(P, D, Q, S))
                 model = model.fit()
 
-                self.handle_prediction(train, val, model, name)
+                self.handle_prediction(train, val, model, identifier)
 
         else:
             self.handle_prediction(self.train, self.val, model, self.cfg.type_identifier)
