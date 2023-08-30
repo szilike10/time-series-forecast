@@ -68,11 +68,13 @@ def plot_autocorrelation(frequency, column='valoare'):
     plt.show()
 
 
-def plot_forecast(y_true, y_pred, filename, draw_plot=False):
+def plot_forecast(y_true, y_pred, filename, loss, draw_plot=False):
     fig, ax = plt.subplots()
 
     fig.set_size_inches((7, 3.5))
     plt.tight_layout()
+
+    ax.set_title(f'Statsmodels előrejelzés, RMSE = {loss}')
 
     ax.plot(y_true['ds'], y_true['y'], linewidth=1.5, label='Megfigyelés')
     ax.plot(y_pred['ds'], y_pred['y'], 'tab:orange', linewidth=1.5, label='Előrejelzés')
@@ -134,10 +136,10 @@ def predict_combined_products(frequency='daily', column='valoare'):
     loss_df.to_csv(loss_df_filename, index=False)
 
     train_val_plot_filename = f'charts/{frequency}/{column}/statsmodels_{p}_{d}_{q}_{m}.png'
-    plot_forecast(pd.concat([train, val]), y_pred_df, train_val_plot_filename)
+    plot_forecast(pd.concat([train, val]), y_pred_df, train_val_plot_filename, rmse)
 
     val_plot_filename = f'charts/{frequency}/{column}/statsmodels_combined_{p}_{d}_{q}_{m}_val.png'
-    plot_forecast(val, y_pred_df, val_plot_filename)
+    plot_forecast(val, y_pred_df, val_plot_filename, rmse)
 
 
 def grid_search(train, val, type_identifier, frequency='daily', column='valoare'):

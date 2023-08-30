@@ -3,10 +3,12 @@ import matplotlib.pyplot as plt
 from utils.path_handling import handle_parent_path
 
 
-def plot_prophet_forecast(y_data, y_pred, filename):
+def plot_prophet_forecast(y_data, y_pred, filename, loss):
     fig, ax = plt.subplots()
 
     fig.set_size_inches((7, 3))
+
+    ax.set_title(f'Prophet előrejelzés, RMSE = {loss}')
 
     ax.plot(y_data['ds'], y_data['y'], linewidth=1.5, label='Megfigyelés')
     ax.plot(y_pred['ds'], y_pred['yhat'], c='tab:orange', linewidth=1.5, label='Előrejelzés')

@@ -63,12 +63,12 @@ class ProphetModel(ForecastingModel):
                    f'{self.cfg.frequency}/valoare/{self.cfg.group_by_col}/{self.last_trained_group}.png'
         plot_prophet_forecast(pd.concat([self.train, self.val]),
                               val_forecast,
-                              filename)
+                              filename, rmse)
 
         filename = f'{self.cfg.project_root}/forecast/prophet/charts/train/' \
                    f'{self.cfg.frequency}/valoare/{self.cfg.group_by_col}/{self.last_trained_group}_val.png'
         plot_prophet_forecast(self.val,
                               val_forecast,
-                              filename)
+                              filename, rmse)
 
         return loss
