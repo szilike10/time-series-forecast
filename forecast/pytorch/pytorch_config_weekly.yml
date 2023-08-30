@@ -1,0 +1,32 @@
+frequency: 'weekly'
+cumulated_csv_path: ''
+group_identifiers: ['tmp']
+smoothing_window_size: 0
+timeseries_min_length: 50
+min_prediction_length: 60
+max_prediction_length: 60
+min_encoder_length: 250
+max_encoder_length: 300
+target_variable: 'valoare'
+static_categoricals: ['tmp', 'um']
+static_reals: []
+time_varying_known_categoricals: []
+time_varying_known_reals: ['time_idx', 'pret', 'month', 'week_of_month']
+time_varying_unknown_categoricals: []
+time_varying_unknown_reals: ['cantitate']
+device: 'gpu'
+batch_size: 96
+max_epochs: 200
+gradient_clip: 0.05
+learning_rate: 0.001
+hidden_size: 256
+lstm_layers: 2
+attention_head_size: 8
+hidden_continuous_size: 8
+dropout: 0.15
+reduce_on_plateau_patience: 5
+early_stopping_patience: 20
+loss_fn: 'QuantileLoss'
+best_model_out_path: 'best_model.txt'
+start_date: '2022-01-01'
+end_date: '2023-01-01'
