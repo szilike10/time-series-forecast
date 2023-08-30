@@ -1,4 +1,4 @@
-combined_csv_path: D:\Master\disszertacio\time-series-forecast\data\combined.csv
+combined_csv_path: C:\Users\bas6clj\time-series-forecast\data\combined.csv
 frequency: 'daily'
 group_identifiers: []
 smoothing_window_size: 0

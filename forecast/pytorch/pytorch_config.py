@@ -59,7 +59,7 @@ class PytorchConfig(Config):
         self.timeseries_length = (self.end_date - self.start_date).days
 
         loss_fn_dict = {
-            'QuantileLoss': QuantileLoss(),
+            'QuantileLoss': QuantileLoss(quantiles=[0.05, 0.1, 0.5, 0.9, 0.95]),
             'RMSE': RMSE(),
         }
 

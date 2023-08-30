@@ -3,7 +3,7 @@ import pandas as pd
 import lightning.pytorch as pl
 import torch
 
-from pytorch_forecasting import TimeSeriesDataSet, GroupNormalizer, TemporalFusionTransformer, RMSE
+from pytorch_forecasting import TimeSeriesDataSet, GroupNormalizer, TemporalFusionTransformer, RMSE, QuantileLoss
 from forecast.model import ForecastingModel
 from forecast.pytorch.pytorch_config import PytorchConfig
 from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor
@@ -166,11 +166,13 @@ class TFTModel(ForecastingModel):
 
         # calculate root mean square error on validation set
         predictions = best_tft.predict(val, return_y=True, trainer_kwargs=dict(accelerator=self.cfg.device), return_x=True)
-        mse = RMSE()(predictions.output, predictions.y)
+        rmse = RMSE()(predictions.output, predictions.y)
 
-        print(f'RMSE = {mse}')
+        print(f'RMSE = {rmse}')
+
+        quantiles = [0.05, 0.1, 0.5, 0.9, 0.95] if isinstance(self.cfg.loss_fn, QuantileLoss) else None
 
         raw_predictions = best_tft.predict(val, mode='raw', return_x=True, return_y=True)
         if visualize:
             img_out_prefix = f'{self.best_model_path.rsplit(os.sep, 1)[0]}/{self.cfg.frequency}'
-            plot_raw_predictions(best_tft, raw_predictions, img_out_prefix)
+            plot_raw_predictions(best_tft, raw_predictions, img_out_prefix, rmse, quantiles)
