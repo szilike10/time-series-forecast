@@ -57,6 +57,10 @@ class PytorchConfig(Config):
         self.end_date = pd.to_datetime(self.yaml_obj.get('end_date', None))
 
         self.timeseries_length = (self.end_date - self.start_date).days
+        if self.frequency == 'weekly':
+            self.timeseries_length = self.timeseries_length // 7
+        elif self.frequency == 'monthly':
+            self.timeseries_length = self.timeseries_length // 30
 
         loss_fn_dict = {
             'QuantileLoss': QuantileLoss(quantiles=[0.05, 0.1, 0.5, 0.9, 0.95]),

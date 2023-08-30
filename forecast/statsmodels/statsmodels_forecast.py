@@ -71,7 +71,7 @@ def plot_autocorrelation(frequency, column='valoare'):
 def plot_forecast(y_true, y_pred, filename, loss, draw_plot=False):
     fig, ax = plt.subplots()
 
-    fig.set_size_inches((7, 3.5))
+    fig.set_size_inches((7, 3))
     plt.tight_layout()
 
     ax.set_title(f'Statsmodels előrejelzés, RMSE = {loss}')
@@ -86,6 +86,7 @@ def plot_forecast(y_true, y_pred, filename, loss, draw_plot=False):
     ax.legend()
 
     handle_parent_path(filename)
+    plt.tight_layout()
     plt.savefig(filename, dpi=300)
 
     if draw_plot:
@@ -100,9 +101,9 @@ def predict_combined_products(frequency='daily', column='valoare'):
                                       start_date=pd.to_datetime('2022-01-01'),
                                       end_date=pd.to_datetime('2023-01-01'))
 
-    p, d, q, m = (7, 0, 7, 14) if frequency == 'daily' else (2, 1, 1, 8)
+    p, d, q, m = (6, 0, 6, 7) if frequency == 'daily' else (2, 1, 1, 4)
 
-    ARMAmodel = SARIMAX(train['y'], order=(p, d, q), seasonal_order=(p, d, q, m))
+    ARMAmodel = SARIMAX(train['y'], order=(p, d, q), seasonal_order=(2, d, 2, m))
     ARMAmodel = ARMAmodel.fit()
 
     y_pred = ARMAmodel.get_forecast(len(val['ds']))
@@ -421,7 +422,7 @@ def compare_to_mean(item_type=None, frequency='daily', column='valoare'):
 
 
 if __name__ == '__main__':
-    frequency = 'daily'
+    frequency = 'weekly'
     column = 'valoare'
 
     # plot_autocorrelation(frequency=frequency, column=column)

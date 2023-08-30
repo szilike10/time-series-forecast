@@ -41,6 +41,7 @@ class TFTModel(ForecastingModel):
         self.data['date'] = pd.to_datetime(self.data['data'], errors='coerce')
         self.data['day_of_week'] = self.data['date'].dt.dayofweek
         self.data['day_of_month'] = self.data['date'].dt.day
+        self.data['week_of_month'] = self.data['day_of_month'] // 7
         self.data['month'] = self.data.date.dt.month
         if self.cfg.frequency == 'weekly':
             self.data['time_idx'] = self.data['week_no']

@@ -122,6 +122,7 @@ class CumStat:
         ret_df = ret_df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
                                                    pret=('pret', 'mean'),
                                                    valoare=('valoare', 'sum'),
+                                                   um=('um', 'first'),
                                                    week=('week', 'first')).reset_index()
         ret_df['data'] = ret_df['week']
         ret_df = ret_df.sort_values(by=group_by_list)
@@ -142,6 +143,8 @@ class CumStat:
         ret_df = self._fill_df_with_week(ret_df)
 
         ret_df = ret_df.reset_index(drop=True)
+
+        ret_df['tmp'] = ['all' for _ in range(len(ret_df))]
 
         ret_df.to_csv(path_to_cached_df, index=True)
 

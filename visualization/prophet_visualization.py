@@ -20,4 +20,5 @@ def plot_prophet_forecast(y_data, y_pred, filename, loss):
     ax.legend()
 
     handle_parent_path(filename)
+    plt.tight_layout()
     plt.savefig(filename, dpi=300)
