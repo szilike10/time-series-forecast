@@ -11,7 +11,8 @@ target_variable: 'valoare'
 static_categoricals: ['tmp', 'um']
 static_reals: []
 time_varying_known_categoricals: []
-time_varying_known_reals: ['time_idx', 'pret', 'month', 'week_of_month']
+#time_varying_known_reals: ['time_idx', 'pret', 'month', 'week_of_month']
+time_varying_known_reals: ['time_idx', 'pret', 'month']
 time_varying_unknown_categoricals: []
 time_varying_unknown_reals: ['cantitate']
 device: 'gpu'

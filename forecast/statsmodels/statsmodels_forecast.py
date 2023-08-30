@@ -101,7 +101,7 @@ def predict_combined_products(frequency='daily', column='valoare'):
                                       start_date=pd.to_datetime('2022-01-01'),
                                       end_date=pd.to_datetime('2023-01-01'))
 
-    p, d, q, m = (6, 0, 6, 7) if frequency == 'daily' else (2, 1, 2, 4)
+    p, d, q = (6, 0, 6) if frequency == 'daily' else (2, 1, 1)
     P, D, Q, S = (2, 1, 2, 7) if frequency == 'daily' else (2, 1, 2, 4)
 
     ARMAmodel = SARIMAX(train['y'], order=(p, d, q), seasonal_order=(P, D, Q, S))
