@@ -21,5 +21,5 @@ if __name__ == '__main__':
 
     cfg = load_config(cfg_path)
     prophet_model = create_model(cfg)
-    prophet_model.fit('baton')
+    prophet_model.fit()
     prophet_model.eval()

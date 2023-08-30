@@ -159,22 +159,31 @@ class TFTModel(ForecastingModel):
         return predictions
 
     # TODO: Add list of metrics to calculate and store them in a dictionary by name
-    def eval(self, val: pd.DataFrame = None, visualize=False):
-        best_tft = TemporalFusionTransformer.load_from_checkpoint(self.best_model_path)
+    def eval(self, visualize=False, path_to_model=None):
+        if path_to_model is None:
+            path_to_model = self.best_model_path
+        best_tft = TemporalFusionTransformer.load_from_checkpoint(path_to_model)
 
-        if val is None:
-            val = self.validation.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
+        for identifier in self.data['_'.join(self.cfg.group_identifiers)].unique():
+            dataset = TimeSeriesDataSet.from_dataset(self.training,
+                                                     self.data[
+                                                         self.data['_'.join(self.cfg.group_identifiers)] == identifier],
+                                                     predict=True, stop_randomization=True)
+            val = dataset.to_dataloader(train=False, batch_size=self.cfg.batch_size, num_workers=0)
 
-        # calculate root mean square error on validation set
-        predictions = best_tft.predict(val, return_y=True, trainer_kwargs=dict(accelerator=self.cfg.device), return_x=True)
-        rmse = RMSE()(predictions.output, predictions.y)
 
-        print(f'RMSE = {rmse}')
+            # calculate root mean square error on validation set
+            predictions = best_tft.predict(val, return_y=True, trainer_kwargs=dict(accelerator=self.cfg.device), return_x=True)
+            rmse = RMSE()(predictions.output, predictions.y)
 
-        quantiles = [0.05, 0.1, 0.5, 0.9, 0.95] if isinstance(self.cfg.loss_fn, QuantileLoss) else None
+            print(f'RMSE = {rmse}')
 
-        raw_predictions = best_tft.predict(val, mode='raw', return_x=True, return_y=True)
-        if visualize:
-            img_out_prefix = f'{self.best_model_path.rsplit(os.sep, 1)[0]}/{self.cfg.frequency}'
-            plot_raw_predictions(best_tft, raw_predictions, img_out_prefix, rmse,
-                                 self.cfg.start_date, self.cfg.frequency, quantiles)
+            quantiles = [0.05, 0.1, 0.5, 0.9, 0.95] if isinstance(self.cfg.loss_fn, QuantileLoss) else None
+
+            raw_predictions = best_tft.predict(val, mode='raw', return_x=True, return_y=True)
+            if visualize:
+                img_out_prefix = f'{path_to_model.rsplit(os.sep, 1)[0]}/'
+                if identifier is not None:
+                    img_out_prefix += f'/{identifier}'
+                plot_raw_predictions(best_tft, raw_predictions, img_out_prefix, rmse,
+                                     self.cfg.start_date, self.cfg.frequency, quantiles)

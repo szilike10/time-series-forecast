@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
+from utils.path_handling import handle_parent_path
+
 
 def plot_raw_predictions(model, predictions, out_path_prefix, loss, start_date, frequency, quantiles=None):
     offset_multiplier = 1
@@ -33,22 +35,22 @@ def plot_raw_predictions(model, predictions, out_path_prefix, loss, start_date, 
                         label='0.05 konf. intervallum')
         ax.legend()
 
-        img_path = f'{out_path_prefix}_{idx}.png'
+        img_path = f'{out_path_prefix}/{frequency}_{idx}.png'
+        handle_parent_path(img_path)
         print(img_path)
         fig.set_size_inches((7, 3))
         plt.tight_layout()
         plt.savefig(img_path, dpi=600)
 
 
-        fig = model.plot_prediction(predictions.x, predictions.output, idx=idx)
-        ax.set_title(f'TFT előrejelzés, RMSE = {loss}')
-        img_path = f'{out_path_prefix}_{idx}_orig.png'
-        print(img_path)
-        fig.set_size_inches((7, 3))
-        # plt.tight_layout()
-        plt.savefig(img_path, dpi=600)
-
-        # fig = model.plot_prediction(predictions.y, predictions.output, idx=idx, add_loss_to_title=True)
+        # fig = model.plot_prediction(predictions.x, predictions.output, idx=idx)
+        # ax.set_title(f'TFT előrejelzés, RMSE = {loss}')
+        # img_path = f'{out_path_prefix}/{frequency}_{idx}_orig.png'
+        # handle_parent_path(img_path)
+        # print(img_path)
+        # fig.set_size_inches((7, 3))
+        # # plt.tight_layout()
+        # plt.savefig(img_path, dpi=600)
 
         fig, ax = plt.subplots()
         ax.set_title(f'TFT előrejelzés, RMSE = {loss}')
@@ -60,7 +62,8 @@ def plot_raw_predictions(model, predictions, out_path_prefix, loss, start_date, 
                         label='0.05 konf. intervallum')
         ax.legend()
 
-        img_path = f'{out_path_prefix}_{idx}_val.png'
+        img_path = f'{out_path_prefix}/{frequency}_{idx}_val.png'
+        handle_parent_path(img_path)
         print(img_path)
         fig.set_size_inches((7, 3))
         plt.tight_layout()

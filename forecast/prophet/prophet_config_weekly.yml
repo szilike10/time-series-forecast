@@ -3,7 +3,7 @@ frequency: 'weekly'
 group_identifiers: []
 smoothing_window_size: 0
 daily_seasonality: False
-weekly_seasonality: True
+weekly_seasonality: False
 yearly_seasonality: True
 interval_width: 0.95
 future_dataframe_periods: 100
