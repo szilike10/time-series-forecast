@@ -1,6 +1,6 @@
 frequency: 'daily'
 cumulated_csv_path: ''
-group_identifiers: ['tmp']
+group_identifiers: ['category']
 smoothing_window_size: 0
 timeseries_min_length: 200
 min_prediction_length: 60
@@ -11,14 +11,14 @@ target_variable: 'valoare'
 static_categoricals: ['tmp', 'um']
 static_reals: []
 time_varying_known_categoricals: []
-time_varying_known_reals: ['time_idx', 'pret', 'month', 'day_of_week', 'day_of_week']
+time_varying_known_reals: ['time_idx', 'pret', 'month', 'day_of_week', 'day_of_month']
 time_varying_unknown_categoricals: []
 time_varying_unknown_reals: ['cantitate']
 device: 'gpu'
 batch_size: 96
-max_epochs: 200
+max_epochs: 60
 gradient_clip: 0.05
-learning_rate: 0.001
+learning_rate: 0.0001
 hidden_size: 256
 lstm_layers: 2
 attention_head_size: 8

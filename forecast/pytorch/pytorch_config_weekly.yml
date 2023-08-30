@@ -19,7 +19,7 @@ device: 'gpu'
 batch_size: 96
 max_epochs: 200
 gradient_clip: 0.05
-learning_rate: 0.001
+learning_rate: 0.0005
 hidden_size: 256
 lstm_layers: 2
 attention_head_size: 8

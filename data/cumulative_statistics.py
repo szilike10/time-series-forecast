@@ -53,6 +53,18 @@ class CumStat:
 
         return df
 
+    def fill_df_with_grouped_col(self, group_by_list, df):
+        ret_df = deepcopy(df)
+        if len(group_by_list) > 0:
+            new_col = '_'.join(group_by_list)
+            ret_df[new_col] = ret_df[group_by_list[0]]
+            for col_name in group_by_list[1:]:
+                ret_df[new_col] += '_' + ret_df[col_name].map(str)
+        else:
+            new_col = 'data'
+
+        return ret_df, new_col
+
     def post_process_data(self, df, col, date_col, frequency):
         ret_df = pd.DataFrame()
 
@@ -108,14 +120,7 @@ class CumStat:
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 
-        ret_df = deepcopy(self.df)
-        if len(group_by_list) > 0:
-            new_col = '_'.join(group_by_list)
-            ret_df[new_col] = ret_df[group_by_list[0]]
-            for col_name in group_by_list[1:]:
-                ret_df[new_col] += '_' + ret_df[col_name].map(str)
-        else:
-            new_col = 'data'
+        ret_df, new_col = self.fill_df_with_grouped_col(group_by_list, self.df)
 
         ret_df = self._fill_df_with_week(ret_df)
         group_by_list.append('week_no')
@@ -168,14 +173,7 @@ class CumStat:
         if os.path.exists(path_to_cached_df):
             return pd.read_csv(path_to_cached_df)
 
-        ret_df = deepcopy(self.df)
-        if len(group_by_list) > 0:
-            new_col = '_'.join(group_by_list)
-            ret_df[new_col] = ret_df[group_by_list[0]]
-            for col_name in group_by_list[1:]:
-                ret_df[new_col] += '_' + ret_df[col_name].map(str)
-        else:
-            new_col = 'data'
+        ret_df, new_col = self.fill_df_with_grouped_col(group_by_list, self.df)
 
         ret_df = self._fill_df_with_day(ret_df)
         group_by_list.append('day')
@@ -228,7 +226,7 @@ class CumStat:
                                      filter_under=filter_under)
 
         if item_type is not None:
-            ret_df = ret_df.query(f'{item_type} == @type_identifier')
+            ret_df = ret_df.query(f'{item_type} == @type_identifier').reset_index()
 
         if not fill_missing_dates:
             return ret_df

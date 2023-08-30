@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from data.cumulative_statistics import CumStat
 
@@ -14,6 +15,12 @@ class DataLoader:
 
     def get_categories(self):
         return self.cumstat.get_all_categories()
+
+    def get_unique(self, frequency, group_by_list, filter_under):
+        df = self.cumstat.cumulate_daily(group_by_list, filter_under=filter_under) if frequency == 'daily' else \
+            self.cumstat.cumulate_weekly(group_by_list, filter_under=filter_under)
+
+        return np.sort(df['_'.join(group_by_list)].unique())
 
     def load_data(self, frequency='daily', item_type=None, type_identifier=None,
                   value_type='valoare', start_date=None, end_date=None, min_length=0):

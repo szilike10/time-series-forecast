@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error
@@ -11,6 +12,7 @@ from tqdm import tqdm
 from data.data_generator import DataLoader
 from forecast.model import ForecastingModel
 from forecast.statsmodels.statsmodels_config import StatsmodelsConfig
+from visualization.statsmodels_visualization import plot_forecast
 
 
 class StatModel(ForecastingModel):
@@ -19,16 +21,17 @@ class StatModel(ForecastingModel):
 
         self.cfg = cfg
 
-        self.dataloader = DataLoader(self.cfg.combined_csv_path)
+        self.dataloader = DataLoader(path_to_csv=self.cfg.combined_csv_path)
 
         self.type_identifier = self.cfg.type_identifier
 
         self.train, self.val = self.dataloader.load_data(frequency=self.cfg.frequency,
-                                               value_type=self.cfg.target,
-                                               item_type='_'.join(self.cfg.group_identifiers),
-                                               type_identifier=self.cfg.type_identifier,
-                                               start_date=self.cfg.start_date,
-                                               end_date=self.cfg.end_date)
+                                                         value_type=self.cfg.target,
+                                                         item_type='_'.join(self.cfg.group_identifiers),
+                                                         type_identifier=self.cfg.type_identifier,
+                                                         start_date=self.cfg.start_date,
+                                                         end_date=self.cfg.end_date,
+                                                         min_length=self.cfg.timeseries_min_length)
 
     def check_stationarity(self):
 
@@ -68,7 +71,8 @@ class StatModel(ForecastingModel):
         plt.show()
 
     def fit(self, type_identifier=None, p=None, d=None, q=None, P=None, D=None, Q=None, S=None):
-        p, d, q, S = (7, 0, 7, 14) if self.cfg.frequency == 'daily' else (2, 1, 1, 8)
+        p, d, q = (6, 0, 6) if self.cfg.frequency == 'daily' else (2, 1, 1)
+        P, D, Q, S = (2, 0, 2, 7) if self.cfg.frequency == 'daily' else (2, 1, 2, 4)
 
         model = SARIMAX(self.train['y'], order=(p, d, q), seasonal_order=(P, D, Q, S))
         model = model.fit()
@@ -139,3 +143,47 @@ class StatModel(ForecastingModel):
         print('Best values: ', search_df)
 
         return search_df['p'], search_df['d'], search_df['q']
+
+    def eval(self, model=None):
+
+        if model is None:
+            uniques = self.dataloader.get_unique(self.cfg.frequency,
+                                                 self.cfg.group_identifiers,
+                                                 self.cfg.timeseries_min_length)
+
+            for name in uniques:
+                print(name)
+
+                train, val = self.dataloader.load_data(frequency=self.cfg.frequency,
+                                                       value_type=self.cfg.target,
+                                                       item_type='_'.join(self.cfg.group_identifiers),
+                                                       type_identifier=name,
+                                                       start_date=self.cfg.start_date,
+                                                       end_date=self.cfg.end_date,
+                                                       min_length=self.cfg.timeseries_min_length)
+                p, d, q = (6, 0, 6) if self.cfg.frequency == 'daily' else (2, 1, 1)
+                P, D, Q, S = (2, 0, 2, 7) if self.cfg.frequency == 'daily' else (2, 1, 2, 4)
+
+                model = SARIMAX(self.train['y'], order=(p, d, q), seasonal_order=(P, D, Q, S))
+                model = model.fit()
+
+                self.handle_prediction(train, val, model, name)
+
+        else:
+            self.handle_prediction(self.train, self.val, model, self.cfg.type_identifier)
+
+    def handle_prediction(self, train, val, model, identifier):
+        y_pred = model.get_forecast(len(val['ds']))
+        y_pred_df = y_pred.conf_int(alpha=0.05)
+        y_pred_df['y'] = model.predict(start=y_pred_df.index[0], end=y_pred_df.index[-1])
+        y_pred_df['ds'] = val['ds']
+        y_pred_df.index = val.index
+
+        loss = mean_squared_error(val['y'], y_pred_df['y'])
+        rmse = np.sqrt(loss)
+
+        train_val_plot_filename = f'charts/{self.cfg.frequency}/{self.cfg.target}/{identifier}/statsmodels_{identifier}.png'
+        plot_forecast(pd.concat([train, val]), y_pred_df, train_val_plot_filename, rmse)
+
+        val_plot_filename = f'charts/{self.cfg.frequency}/{self.cfg.target}/{identifier}/statsmodels_{identifier}_val.png'
+        plot_forecast(val, y_pred_df, val_plot_filename, rmse)
