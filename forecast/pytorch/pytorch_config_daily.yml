@@ -1,6 +1,6 @@
 frequency: 'daily'
 cumulated_csv_path: ''
-group_identifiers: ['category']
+group_identifiers: ['cluster']
 smoothing_window_size: 0
 timeseries_min_length: 200
 min_prediction_length: 60

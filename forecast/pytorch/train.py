@@ -21,6 +21,7 @@ if __name__ == '__main__':
 
     cfg = load_config(cfg_path)
     tft_model = create_model(cfg)
-    # tft_model.fit()
-    path_to_model = r'C:\Users\bas6clj\time-series-forecast\forecast\pytorch\lightning_logs\lightning_logs\version_94\checkpoints\epoch=37-step=1026.ckpt'
-    tft_model.eval(path_to_model=path_to_model, visualize=True)
+    tft_model.fit()
+    tft_model.eval(visualize=True)
+    # path_to_model = r'C:\Users\bas6clj\time-series-forecast\forecast\pytorch\lightning_logs\lightning_logs\version_94\checkpoints\epoch=37-step=1026.ckpt'
+    # tft_model.eval(path_to_model=path_to_model, visualize=True)

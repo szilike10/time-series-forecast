@@ -1,6 +1,8 @@
 import argparse
 import pandas as pd
 import re
+import inflect
+
 
 from sklearn.cluster import DBSCAN
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -49,6 +51,9 @@ def cluster_items(x):
 
     labels = dbscan.labels_
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+
+    p = inflect.engine()
+    labels = [p.number_to_words(l) for l in labels]
 
     return labels, n_clusters
 
