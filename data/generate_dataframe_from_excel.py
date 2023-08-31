@@ -46,7 +46,7 @@ def cluster_items(x):
     tfidf_vectorizer = TfidfVectorizer()
     tfidf_matrix = tfidf_vectorizer.fit_transform(x)
 
-    dbscan = DBSCAN(eps=1, min_samples=5, metric='euclidean')
+    dbscan = DBSCAN(eps=0.5, min_samples=5, metric='cosine')
     dbscan.fit(tfidf_matrix)
 
     labels = dbscan.labels_
