@@ -25,6 +25,8 @@ class ProphetConfig(Config):
             self.group_by_col = 'category'
         elif 'cod_art' in self.group_identifiers:
             self.group_by_col = 'cod_art'
+        elif 'cluster' in self.group_identifiers:
+            self.group_by_col = 'cluster'
         else:
             self.group_by_col = None
         self.dataloader = DataLoader(path_to_csv=self.combined_csv_path)

@@ -57,7 +57,7 @@ class CumStat:
         ret_df = deepcopy(df)
         if len(group_by_list) > 0:
             new_col = '_'.join(group_by_list)
-            ret_df[new_col] = ret_df[group_by_list[0]]
+            ret_df[new_col] = ret_df[group_by_list[0]].map(str)
             for col_name in group_by_list[1:]:
                 ret_df[new_col] += '_' + ret_df[col_name].map(str)
         else:
@@ -177,10 +177,13 @@ class CumStat:
 
         ret_df = self._fill_df_with_day(ret_df)
         group_by_list.append('day')
-        ret_df = ret_df.groupby(group_by_list).agg(cantitate=('cantitate', 'sum'),
-                                                    pret=('pret', 'mean'),
-                                                    valoare=('valoare', 'sum'),
-                                                    um=('um', 'first')).reset_index()
+        group_dict = {'cantitate': 'sum',
+                      'pret': 'mean',
+                      'valoare': 'sum',
+                      'um': 'first'}
+        if new_col not in ret_df.columns:
+            group_dict[new_col] = 'first'
+        ret_df = ret_df.groupby(group_by_list).agg(group_dict).reset_index()
         ret_df['data'] = ret_df['day']
         ret_df = ret_df.sort_values(by=group_by_list)
 
@@ -192,7 +195,8 @@ class CumStat:
         if new_col != 'data' and filter_under > 0:
             ret_df['clipped'] = ret_df['cantitate'].clip(lower=1, upper=1)
             for value in ret_df[new_col].unique():
-                if ret_df[ret_df[new_col] == value]['clipped'].sum() < filter_under:
+                sum = ret_df[ret_df[new_col] == value]['clipped'].sum()
+                if sum < filter_under:
                     ret_df.drop(ret_df.loc[ret_df[new_col] == value].index, inplace=True)
 
         ret_df = self.post_process_data(ret_df, new_col, 'day', 'daily')

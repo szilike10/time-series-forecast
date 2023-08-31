@@ -58,7 +58,7 @@ def plot_raw_predictions(model, predictions, out_path_prefix, loss, start_date, 
         ax.plot(y_future_ds, y_pred_future, c='tab:orange', label='Előrejelzés')
         ax.plot(y_future_ds, y_pred_low, c='tab:orange', alpha=0.5, linewidth=0.5)
         ax.plot(y_future_ds, y_pred_high, c='tab:orange', alpha=0.5, linewidth=0.5)
-        ax.fill_between(y_future_ds, y_pred_low, y_pred_high, color='red', alpha=0.15,
+        ax.fill_between(y_future_ds, y_pred_low, y_pred_high, color='red', alpha=0.1,
                         label='0.05 konf. intervallum')
         ax.legend()
 
